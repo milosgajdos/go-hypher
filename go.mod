@@ -1,3 +1,3 @@
-module github.com/milosgajdos/go-repo-template
+module github.com/milosgajdos/go-hypher
 
-go 1.21
+go 1.22.5
