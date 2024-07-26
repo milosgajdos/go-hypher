@@ -1,18 +1,22 @@
 # go-hypher
 
 [![Build Status](https://github.com/milosgajdos/go-hypher/workflows/CI/badge.svg)](https://github.com/milosgajdos/go-hypher/actions?query=workflow%3ACI)
-[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/milosgajdos/go-hypher)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https:/.go.dev/github.com/milosgajdos/go-hypher)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+Go module for building AI agents as computational graphs.
 
 > [!IMPORTANT]
 > **THIS IS A WILD THEORETICAL EXPERIMENT**
 
-`go-hypher` attempts to implement AI agents as computational graphs in Go.
+This project attempts to implement AI agents as computational graphs in Go.
 
 > [!NOTE]
 > The name of the project has been inspired by [Hypha](https://en.wikipedia.org/wiki/Hypha)
 > which is understood to be a long, branching structure -- like a graph -- which enables
 > communication in fungi by conducting electrical impulses through hyphae.
+
+# Basics
 
 AI agent is represented as a weighted directed acyclic graph (DAG).
 
