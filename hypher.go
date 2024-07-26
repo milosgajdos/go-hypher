@@ -1,4 +1,4 @@
-// Package hypher enables creating AI agents as computational graphs.
+// Package go-hypher enables creating AI agents as computational graphs.
 //
 // An agent is represented as a weighted Directed Acyclic Graph (DAG)
 // which consists of nodes that perform a specific operation during

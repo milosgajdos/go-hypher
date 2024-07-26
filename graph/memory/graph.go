@@ -1,0 +1,509 @@
+package memory
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"sync"
+
+	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
+
+	"gonum.org/v1/gonum/graph"
+	gonum "gonum.org/v1/gonum/graph"
+	"gonum.org/v1/gonum/graph/simple"
+	"gonum.org/v1/gonum/graph/topo"
+
+	"github.com/milosgajdos/go-hypher/graph/style"
+)
+
+const (
+	// DefaultGraphLabel is the default label.
+	DefaultGraphLabel = "InMemoryGraph"
+)
+
+// Graph is an in-memory graph.
+type Graph struct {
+	*simple.WeightedDirectedGraph
+	uid   string
+	label string
+	attrs map[string]any
+	// node cache
+	nodes map[string]int64
+	// input and output nodes
+	inputs  []*Node
+	outputs []*Node
+	mu      *sync.RWMutex
+}
+
+// NewGraph creates a new graph and returns it.
+func NewGraph(opts ...Option) (*Graph, error) {
+	gopts := Options{
+		UID:    uuid.New().String(),
+		Label:  DefaultGraphLabel,
+		Weight: DefaultEdgeWeight,
+		Attrs:  make(map[string]any),
+	}
+
+	for _, apply := range opts {
+		apply(&gopts)
+	}
+
+	return &Graph{
+		WeightedDirectedGraph: simple.NewWeightedDirectedGraph(gopts.Weight, 0.0),
+		uid:                   gopts.UID,
+		label:                 gopts.Label,
+		attrs:                 gopts.Attrs,
+		nodes:                 make(map[string]int64),
+		inputs:                []*Node{},
+		outputs:               []*Node{},
+		mu:                    &sync.RWMutex{},
+	}, nil
+}
+
+// UID returns graph UID.
+func (g Graph) UID() string {
+	return g.uid
+}
+
+// Label returns graph label.
+func (g Graph) Label() string {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.label
+}
+
+// SetLabel sets label.
+func (g *Graph) SetLabel(l string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.label = l
+}
+
+// SetUID sets UID.
+func (g *Graph) SetUID(uid string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.uid = uid
+}
+
+// Attrs returns graph attributes.
+// TODO: consider cloning these
+func (g *Graph) Attrs() map[string]interface{} {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.attrs
+}
+
+// HasEdgeFromTo returns whether an edge exist between two nodoes with the given IDs.
+func (g Graph) HasEdgeFromTo(uid, vid int64) bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.WeightedDirectedGraph.HasEdgeBetween(uid, vid)
+}
+
+// To returns all nodes that can reach directly to the node with the given ID.
+func (g Graph) To(id int64) gonum.Nodes {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.WeightedDirectedGraph.To(id)
+}
+
+// SetInputs sets graph input nodes.
+func (g *Graph) SetInputs(nodes []*Node) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.inputs = nodes
+}
+
+// Inputs returns graph input nodes.
+// TODO: consider cloning inputs
+func (g Graph) Inputs() []*Node {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.inputs
+}
+
+// SetOutputs sets graph output nodes.
+func (g *Graph) SetOutputs(nodes []*Node) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.outputs = nodes
+}
+
+// Outputs returns graph output nodes.
+// TODO: consider cloning outputs
+func (g Graph) Outputs() []*Node {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.outputs
+}
+
+// NewNode creates a new node and adds it to the graph.
+// It returns the new node or fails with error.
+func (g *Graph) NewNode(opts ...Option) (*Node, error) {
+	uid := uuid.New().String()
+	nopts := Options{
+		ID:    NoneID,
+		UID:   uid,
+		DotID: uid,
+		Label: DefaultNodeLabel,
+		Attrs: make(map[string]any),
+		Style: style.DefaultNode(),
+	}
+
+	for _, apply := range opts {
+		apply(&nopts)
+	}
+
+	node := &Node{
+		id:      NoneID,
+		uid:     nopts.UID,
+		dotid:   nopts.DotID,
+		label:   nopts.Label,
+		attrs:   nopts.Attrs,
+		graph:   g,
+		inputs:  []Value{},
+		outputs: []Value{},
+	}
+
+	if err := g.AddNode(node); err != nil {
+		return nil, err
+	}
+
+	return node, nil
+}
+
+// nodeExists returns true if the node already exists in g.
+func (g *Graph) nodeExists(n *Node) bool {
+	if node := g.Node(n.ID()); node != nil {
+		if _, ok := g.nodes[n.UID()]; !ok {
+			g.nodes[n.UID()] = n.ID()
+		}
+		return true
+	}
+	return false
+}
+
+// AddNode adds a node to the graph ore returns error.
+// If the node's graph is the same as g it returns nil.
+// Otherwise, it tries to preserve the ID of the node
+// unless the ID is not set (NoneID) or a node
+// with the same ID already exists in g, in which
+// case a new ID is generated before the node is added
+// to g. If node's graph is nil, it's set to g.
+func (g *Graph) AddNode(n *Node) error {
+	if n.Graph() != nil {
+		if g.uid == n.Graph().UID() {
+			if g.nodeExists(n) {
+				return nil
+			}
+		}
+	}
+
+	// if it has no ID or a node with the same ID already exists in g.
+	if n.ID() == NoneID || g.Node(n.ID()) != nil {
+		node := g.WeightedDirectedGraph.NewNode()
+		n.id = node.ID()
+	}
+
+	n.graph = g
+	g.WeightedDirectedGraph.AddNode(n)
+	g.nodes[n.UID()] = n.ID()
+	return nil
+}
+
+// NewEdge creates a new edge link its node in the graph.
+// It returns the new edge or fails with error.
+func (g *Graph) NewEdge(from, to *Node, opts ...Option) (*Edge, error) {
+	eopts := Options{
+		UID:    uuid.New().String(),
+		Label:  DefaultEdgeLabel,
+		Weight: DefaultEdgeWeight,
+		Attrs:  make(map[string]any),
+	}
+
+	for _, apply := range opts {
+		apply(&eopts)
+	}
+
+	edge := &Edge{
+		uid:    eopts.UID,
+		from:   from,
+		to:     to,
+		weight: eopts.Weight,
+		label:  eopts.Label,
+		attrs:  eopts.Attrs,
+	}
+
+	if err := g.SetEdge(edge); err != nil {
+		return nil, err
+	}
+
+	return edge, nil
+}
+
+// SetEdge adds the edge e to the graph linking the edge nodes.
+// It adds the edge nodes to the graph if they don't already exist.
+// It returns error if the new edge creates a graph cycle.
+func (g *Graph) SetEdge(e *Edge) error {
+	if edge := g.Edge(e.From().ID(), e.To().ID()); edge != nil {
+		return nil
+	}
+
+	var fromAdded, toAdded bool
+
+	// if the nodes do not exist in the graph we must create them
+	// we can't create an edge between nodes that are not in the graph.
+	if e.from.ID() == NoneID || g.Node(e.from.ID()) == nil {
+		e.from.id = g.WeightedDirectedGraph.NewNode().ID()
+		e.from.graph = g
+		g.WeightedDirectedGraph.AddNode(e.from)
+		g.nodes[e.from.UID()] = e.from.ID()
+		fromAdded = true
+	}
+	if e.to.ID() == NoneID || g.Node(e.to.ID()) == nil {
+		e.to.id = g.WeightedDirectedGraph.NewNode().ID()
+		e.to.graph = g
+		g.WeightedDirectedGraph.AddNode(e.to)
+		g.nodes[e.to.UID()] = e.to.ID()
+		toAdded = true
+	}
+	g.SetWeightedEdge(e)
+
+	// check if there is a cycle
+	if topo.PathExistsIn(g, g.Node(e.To().ID()), g.Node(e.From().ID())) {
+		// remove the edge and the nodes that have just been created
+		g.RemoveEdge(e.from.ID(), e.to.ID())
+		// remove nodes if they had been created
+		if fromAdded {
+			g.RemoveNode(e.from.ID())
+			e.from.id = NoneID
+			e.from.graph = nil
+			delete(g.nodes, e.from.uid)
+		}
+		if toAdded {
+			g.RemoveNode(e.to.ID())
+			e.to.id = NoneID
+			e.to.graph = nil
+			delete(g.nodes, e.to.uid)
+		}
+		return fmt.Errorf("detected cycle when adding edge: %s", e)
+	}
+
+	return nil
+}
+
+func (g *Graph) buildSubGraph(sg *Graph, n *Node, outputNodes map[int64]struct{}) (bool, error) {
+	if sg.Node(n.ID()) != nil {
+		return true, nil
+	}
+
+	if _, isOutput := outputNodes[n.ID()]; isOutput {
+		if err := sg.AddNode(n); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	nodeInPathToOut := false
+
+	for _, succ := range graph.NodesOf(g.From(n.ID())) {
+		succNode := succ.(*Node)
+		succInPathToOut, err := g.buildSubGraph(sg, succNode, outputNodes)
+		if err != nil {
+			return false, err
+		}
+		if succInPathToOut {
+			nodeInPathToOut = true
+			if sg.Node(n.ID()) == nil {
+				if err := sg.AddNode(n); err != nil {
+					return false, err
+				}
+			}
+			if sg.Node(succNode.ID()) == nil {
+				if err := sg.AddNode(succNode); err != nil {
+					return false, err
+				}
+			}
+			edge := g.Edge(n.ID(), succNode.ID()).(*Edge)
+			if err := sg.SetEdge(edge); err != nil {
+				return false, err
+			}
+		}
+	}
+
+	return nodeInPathToOut, nil
+}
+
+// SubGraph returns a sub-graph of g which contains all the nodes
+// which are either outputNodes or are on the path to the outputNodes
+// when starting the traversal in inputNodes, including the inputNodes.
+func (g *Graph) SubGraph(inputNodes, outputNodes Nodes) (*Graph, error) {
+	sg, err := NewGraph()
+	if err != nil {
+		return nil, err
+	}
+
+	// Set of output node IDs for a quick lookup
+	outputSet := make(map[int64]struct{})
+	for _, out := range outputNodes {
+		outputSet[out.ID()] = struct{}{}
+	}
+
+	for _, inputNode := range inputNodes {
+		_, err := g.buildSubGraph(sg, inputNode, outputSet)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return sg, nil
+}
+
+// TopoSort performs a topological sort of the graph.
+// It returns nodes sorted in ascending order of their
+// incoming edge counts (i.e. in degree) starting
+// with nodes with zero incoming edges aka "roots".
+// If there isn't at least one node with zero
+// incoming edge the graph must ehter have a cycle,
+// or have no nodes, so an empty slice is returned.
+func (g *Graph) TopoSort() (Nodes, error) {
+	inDeg := make(map[int64]int)
+	var zeroDegQ Nodes
+	var sorted Nodes
+
+	// Calculate in-degree for each node
+	nodes := g.Nodes()
+	for nodes.Next() {
+		node := nodes.Node()
+		id := node.ID()
+		inDeg[id] = g.To(id).Len()
+		if inDeg[id] == 0 {
+			zeroDegQ = append(zeroDegQ, node.(*Node))
+		}
+	}
+
+	// sort the nodes by traversing the graph from
+	// the roots (i.e. zero in-degree nodes)
+	for len(zeroDegQ) > 0 {
+		node := zeroDegQ[0]
+		zeroDegQ = zeroDegQ[1:]
+		sorted = append(sorted, node)
+
+		to := g.From(node.ID())
+		for to.Next() {
+			succ := to.Node()
+			succID := succ.ID()
+			inDeg[succID]--
+			if inDeg[succID] == 0 {
+				zeroDegQ = append(zeroDegQ, succ.(*Node))
+			}
+		}
+	}
+
+	return sorted, nil
+}
+
+func (g *Graph) execNode(ctx context.Context, node *Node, nodeChans map[int64]chan struct{}) error {
+	// TODO: handle the case where we might not want to
+	// aggregate all the predecessor outputs into Exec input;
+	// We might want to do an exec for each predecessor output
+	var nodeInputs []Value
+	to := g.To(node.ID())
+	for to.Next() {
+		pred := to.Node()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-nodeChans[pred.ID()]: // Wait for the predecessor to finish
+			predOutputs := pred.(*Node).Outputs()
+			nodeInputs = append(nodeInputs, predOutputs...)
+		}
+	}
+
+	// exec the node
+	if _, err := node.Exec(nodeInputs...); err != nil {
+		return err
+	}
+
+	// Signal completion to dependent nodes aka successors
+	close(nodeChans[node.ID()])
+
+	return nil
+}
+
+// Run runs the graph with the given inputs.
+// The inputs are passed in to the input nodes.
+func (g *Graph) Run(inputs map[string]Value) error {
+	// set inputs to all the input nodes.
+	for _, node := range g.inputs {
+		if nodeInput, ok := inputs[node.UID()]; ok {
+			if err := node.SetInputs(nodeInput); err != nil {
+				return err
+			}
+		}
+	}
+
+	// get the execution (sub)graph
+	sg, err := g.SubGraph(g.inputs, g.outputs)
+	if err != nil {
+		return err
+	}
+
+	// sort the returned graph topologically
+	nodes, err := sg.TopoSort()
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	eg, ctx := errgroup.WithContext(ctx)
+
+	// Create a map to store the channels for each node
+	nodeChans := make(map[int64]chan struct{})
+	for _, node := range nodes {
+		nodeChans[node.ID()] = make(chan struct{})
+	}
+
+	// Start a goroutine for each node
+	for _, node := range nodes {
+		node := node // Create a new variable for the closure
+		eg.Go(func() error {
+			return g.execNode(ctx, node, nodeChans)
+		})
+	}
+
+	// Wait for all goroutines to complete or for an error to occur
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("graph run failed: %v", err)
+	}
+
+	return nil
+}
+
+// String implements fmt.Stringer.
+func (g Graph) String() string {
+	var b strings.Builder
+
+	fmt.Fprintf(&b, "Graph: %s\n", g.label)
+	fmt.Fprintf(&b, "  UID: %s\n", g.uid)
+	fmt.Fprintf(&b, "  Nodes: %d\n", g.Nodes().Len())
+	fmt.Fprintf(&b, "  Edges: %d\n", g.Edges().Len())
+
+	if len(g.inputs) > 0 {
+		fmt.Fprintf(&b, "  Input Nodes: %d\n", len(g.inputs))
+	}
+	if len(g.outputs) > 0 {
+		fmt.Fprintf(&b, "  Output Nodes: %d\n", len(g.outputs))
+	}
+
+	if len(g.attrs) > 0 {
+		fmt.Fprintf(&b, "  Attributes:\n")
+		for k, v := range g.attrs {
+			fmt.Fprintf(&b, "    %s: %v\n", k, v)
+		}
+	}
+
+	return b.String()
+}
