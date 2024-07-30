@@ -6,7 +6,7 @@ import (
 )
 
 // NOTE: This is mostly a copy-pasta from https://github.com/benbjohnson/wtf
-// who deserve all the credit for this awesome work.
+// who deserves all the credit for this awesome work.
 
 // Application error codes.
 //
