@@ -2,7 +2,6 @@ package memory
 
 import (
 	"maps"
-	"sync"
 
 	"gonum.org/v1/gonum/graph/simple"
 )
@@ -45,7 +44,6 @@ func GraphDeepCopy(g *Graph) *Graph {
 		label:                 g.label,
 		attrs:                 maps.Clone(g.attrs),
 		nodes:                 maps.Clone(g.nodes),
-		mu:                    &sync.RWMutex{},
 	}
 
 	inputs := make([]*Node, 0, len(g.inputs))

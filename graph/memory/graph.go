@@ -33,7 +33,7 @@ type Graph struct {
 	// input and output nodes
 	inputs  []*Node
 	outputs []*Node
-	mu      *sync.RWMutex
+	mu      sync.RWMutex
 }
 
 // NewGraph creates a new graph and returns it.
@@ -57,19 +57,19 @@ func NewGraph(opts ...Option) (*Graph, error) {
 		nodes:                 make(map[string]int64),
 		inputs:                []*Node{},
 		outputs:               []*Node{},
-		mu:                    &sync.RWMutex{},
 	}, nil
 }
 
 // UID returns graph UID.
-func (g Graph) UID() string {
+func (g *Graph) UID() string {
 	return g.uid
 }
 
 // Label returns graph label.
-func (g Graph) Label() string {
+func (g *Graph) Label() string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+
 	return g.label
 }
 
@@ -77,6 +77,7 @@ func (g Graph) Label() string {
 func (g *Graph) SetLabel(l string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
 	g.label = l
 }
 
@@ -84,28 +85,32 @@ func (g *Graph) SetLabel(l string) {
 func (g *Graph) SetUID(uid string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
 	g.uid = uid
 }
 
 // Attrs returns graph attributes.
 // TODO: consider cloning these
-func (g *Graph) Attrs() map[string]interface{} {
+func (g *Graph) Attrs() map[string]any {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+
 	return g.attrs
 }
 
 // HasEdgeFromTo returns whether an edge exist between two nodoes with the given IDs.
-func (g Graph) HasEdgeFromTo(uid, vid int64) bool {
+func (g *Graph) HasEdgeFromTo(uid, vid int64) bool {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+
 	return g.WeightedDirectedGraph.HasEdgeBetween(uid, vid)
 }
 
 // To returns all nodes that can reach directly to the node with the given ID.
-func (g Graph) To(id int64) gonum.Nodes {
+func (g *Graph) To(id int64) gonum.Nodes {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+
 	return g.WeightedDirectedGraph.To(id)
 }
 
@@ -117,10 +122,10 @@ func (g *Graph) SetInputs(nodes []*Node) {
 }
 
 // Inputs returns graph input nodes.
-// TODO: consider cloning inputs
-func (g Graph) Inputs() []*Node {
+func (g *Graph) Inputs() []*Node {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+
 	return g.inputs
 }
 
@@ -128,14 +133,16 @@ func (g Graph) Inputs() []*Node {
 func (g *Graph) SetOutputs(nodes []*Node) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
 	g.outputs = nodes
 }
 
 // Outputs returns graph output nodes.
 // TODO: consider cloning outputs
-func (g Graph) Outputs() []*Node {
+func (g *Graph) Outputs() []*Node {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+
 	return g.outputs
 }
 
@@ -182,6 +189,7 @@ func (g *Graph) nodeExists(n *Node) bool {
 		}
 		return true
 	}
+
 	return false
 }
 
@@ -193,6 +201,9 @@ func (g *Graph) nodeExists(n *Node) bool {
 // case a new ID is generated before the node is added
 // to g. If node's graph is nil, it's set to g.
 func (g *Graph) AddNode(n *Node) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	if n.Graph() != nil {
 		if g.uid == n.Graph().UID() {
 			if g.nodeExists(n) {
@@ -210,6 +221,7 @@ func (g *Graph) AddNode(n *Node) error {
 	n.graph = g
 	g.WeightedDirectedGraph.AddNode(n)
 	g.nodes[n.UID()] = n.ID()
+
 	return nil
 }
 
@@ -247,6 +259,9 @@ func (g *Graph) NewEdge(from, to *Node, opts ...Option) (*Edge, error) {
 // It adds the edge nodes to the graph if they don't already exist.
 // It returns error if the new edge creates a graph cycle.
 func (g *Graph) SetEdge(e *Edge) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	if edge := g.Edge(e.From().ID(), e.To().ID()); edge != nil {
 		return nil
 	}
@@ -340,6 +355,9 @@ func (g *Graph) buildSubGraph(sg *Graph, n *Node, outputNodes map[int64]struct{}
 // which are either outputNodes or are on the path to the outputNodes
 // when starting the traversal in inputNodes, including the inputNodes.
 func (g *Graph) SubGraph(inputNodes, outputNodes Nodes) (*Graph, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
 	sg, err := NewGraph()
 	if err != nil {
 		return nil, err
@@ -369,6 +387,9 @@ func (g *Graph) SubGraph(inputNodes, outputNodes Nodes) (*Graph, error) {
 // incoming edge the graph must ehter have a cycle,
 // or have no nodes, so an empty slice is returned.
 func (g *Graph) TopoSort() (Nodes, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
 	inDeg := make(map[int64]int)
 	var zeroDegQ Nodes
 	var sorted Nodes
@@ -483,9 +504,11 @@ func (g *Graph) Run(inputs map[string]Value) error {
 }
 
 // String implements fmt.Stringer.
-func (g Graph) String() string {
-	var b strings.Builder
+func (g *Graph) String() string {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 
+	var b strings.Builder
 	fmt.Fprintf(&b, "Graph: %s\n", g.label)
 	fmt.Fprintf(&b, "  UID: %s\n", g.uid)
 	fmt.Fprintf(&b, "  Nodes: %d\n", g.Nodes().Len())
