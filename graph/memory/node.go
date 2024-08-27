@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"maps"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"gonum.org/v1/gonum/graph/encoding"
@@ -38,6 +39,7 @@ type Node struct {
 	// Node I/O
 	inputs  []Value
 	outputs []Value
+	mu      sync.RWMutex
 }
 
 // NewNode creates a new Node and returns it.
@@ -80,88 +82,127 @@ func NewNode(opts ...Option) (*Node, error) {
 }
 
 // ID returns node ID.
-func (n Node) ID() int64 {
+func (n *Node) ID() int64 {
 	return n.id
 }
 
 // UID returns node UID.
-func (n Node) UID() string {
+func (n *Node) UID() string {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	return n.uid
 }
 
 // SetUID sets UID.
 func (n *Node) SetUID(uid string) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	n.uid = uid
 }
 
 // Label returns node label.
-func (n Node) Label() string {
+func (n *Node) Label() string {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	return n.label
 }
 
 // SetLabel sets node label.
 func (n *Node) SetLabel(l string) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	n.label = l
 }
 
 // Attrs returns node attributes.
 func (n *Node) Attrs() map[string]any {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	return n.attrs
 }
 
 // Graph returns the node graph.
-func (n Node) Graph() *Graph {
+func (n *Node) Graph() *Graph {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	return n.graph
 }
 
 // Inputs return node inputs.
-func (n Node) Inputs() []Value {
+func (n *Node) Inputs() []Value {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	return n.inputs
 }
 
 // SetInputs sets the node inputs.
 func (n *Node) SetInputs(inputs ...Value) error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	n.inputs = inputs
 	return nil
 }
 
 // Outputs returns node outputs.
-func (n Node) Outputs() []Value {
+func (n *Node) Outputs() []Value {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	return n.outputs
 }
 
 // Op returns node Op.
-func (n Node) Op() Op {
+func (n *Node) Op() Op {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	return n.op
 }
 
 // Type returns the type of node style.
-func (n Node) Type() string {
+func (n *Node) Type() string {
 	return n.style.Type
 }
 
 // Shape returns node shape.
-func (n Node) Shape() string {
+func (n *Node) Shape() string {
 	return n.style.Shape
 }
 
 // Color returns node color.
-func (n Node) Color() color.RGBA {
+func (n *Node) Color() color.RGBA {
 	return n.style.Color
 }
 
 // DOTID returns GraphVIz DOT ID.
-func (n Node) DOTID() string {
+func (n *Node) DOTID() string {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	return n.dotid
 }
 
 // SetDOTID sets GraphVIz DOT ID.
 func (n *Node) SetDOTID(dotid string) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	n.dotid = dotid
 }
 
 // Attributes returns node DOT attributes.
-func (n Node) Attributes() []encoding.Attribute {
+func (n *Node) Attributes() []encoding.Attribute {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	a := attrs.ToStringMap(n.attrs)
 	attributes := make([]encoding.Attribute, len(a))
 
@@ -179,6 +220,9 @@ func (n Node) Attributes() []encoding.Attribute {
 // The graph is not copied to the cloned node.
 // No inputs or outputs are copied either.
 func (n *Node) Clone() (*Node, error) {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	options := []Option{
 		WithUID(uuid.New().String()),
 		WithLabel(n.label),
@@ -196,6 +240,9 @@ func (n *Node) Clone() (*Node, error) {
 // The cloned node has a new UID
 // even if g is the same as n.Graph().
 func (n *Node) CloneTo(g *Graph) (*Node, error) {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	if g == nil {
 		return nil, fmt.Errorf("invalid graph: %v", g)
 	}
@@ -214,6 +261,9 @@ func (n *Node) CloneTo(g *Graph) (*Node, error) {
 // Exec executes a node Op and returns its result.
 // It appends the output of the Op to its outputs.
 func (n *Node) Exec(inputs ...Value) (Value, error) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	opInputs := make([]Value, len(n.inputs)+len(inputs))
 	copy(opInputs, n.inputs)
 	copy(opInputs[len(n.inputs):], inputs)
@@ -228,9 +278,11 @@ func (n *Node) Exec(inputs ...Value) (Value, error) {
 }
 
 // String implements fmt.Stringer.
-func (n Node) String() string {
-	var b strings.Builder
+func (n *Node) String() string {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
 
+	var b strings.Builder
 	fmt.Fprintf(&b, "Node: %s\n", n.label)
 	fmt.Fprintf(&b, "  ID: %d\n", n.id)
 	fmt.Fprintf(&b, "  UID: %s\n", n.uid)

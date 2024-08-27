@@ -10,14 +10,21 @@ jobs:
 
   ci:
     name: Run CI
+    env:
+      # Setting GOTOOLCHAIN to local tells go
+      # to to use the bundled Go version rather
+      # than fetching the toolchain according to
+      # toolchain directive found in go.mod.
+      # See: https://brandur.org/fragments/go-version-matrix
+      GOTOOLCHAIN: local
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
         go:
-          - '1.21'
           - '1.22'
+          - '1.23'
 
     steps:
 
@@ -47,10 +54,17 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v ./...
+      run: go test -race -shuffle=on -v ./...
 
   lint:
-    name: Run golangci linter
+    name: Run linter
+    env:
+      # Setting GOTOOLCHAIN to local tells go
+      # to to use the bundled Go version rather
+      # than fetching the toolchain according to
+      # toolchain directive found in go.mod.
+      # See: https://brandur.org/fragments/go-version-matrix
+      GOTOOLCHAIN: local
     timeout-minutes: 5
     runs-on: ${{ matrix.os }}
     strategy:
@@ -58,8 +72,8 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         go:
-          - '1.21'
           - '1.22'
+          - '1.23'
 
     steps:
 
@@ -74,4 +88,4 @@ jobs:
     - name: Run linter
       uses: golangci/golangci-lint-action@v3
       with:
-        version: v1.59
+        version: v1.60
