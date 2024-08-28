@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"image/color"
 	"maps"
@@ -18,7 +19,7 @@ const (
 	// DefaultNodeLabel is the default node label.
 	DefaultNodeLabel = "InMemoryNode"
 	// NoneID is non-existent ID.
-	// Thanks Golang for not having optionals!
+	// Thanks Go for not having optionals!
 	NoneID int64 = -1
 )
 
@@ -260,7 +261,7 @@ func (n *Node) CloneTo(g *Graph) (*Node, error) {
 
 // Exec executes a node Op and returns its result.
 // It appends the output of the Op to its outputs.
-func (n *Node) Exec(inputs ...Value) (Value, error) {
+func (n *Node) Exec(ctx context.Context, inputs ...Value) (Value, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
@@ -268,9 +269,9 @@ func (n *Node) Exec(inputs ...Value) (Value, error) {
 	copy(opInputs, n.inputs)
 	copy(opInputs[len(n.inputs):], inputs)
 
-	output, err := n.op.Do(opInputs...)
+	output, err := n.op.Do(ctx, opInputs...)
 	if err != nil {
-		return nil, fmt.Errorf("node %s error: %v", n, err)
+		return nil, fmt.Errorf("node %s op: %s error: %v", n.UID(), n.op.Desc(), err)
 	}
 	n.outputs = append(n.outputs, output)
 
@@ -301,7 +302,7 @@ func (n *Node) String() string {
 	}
 
 	if n.op != nil {
-		fmt.Fprintf(&b, "  Op: %s\n", n.op.Type())
+		fmt.Fprintf(&b, "  Op: %s, Desc: %s\n", n.op.Type(), n.op.Desc())
 	}
 
 	if len(n.attrs) > 0 {

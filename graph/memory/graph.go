@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
-
 	"gonum.org/v1/gonum/graph"
 	gonum "gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/simple"
@@ -25,6 +24,7 @@ const (
 // Graph is an in-memory graph.
 type Graph struct {
 	*simple.WeightedDirectedGraph
+	// graph metadata
 	uid   string
 	label string
 	attrs map[string]any
@@ -118,6 +118,7 @@ func (g *Graph) To(id int64) gonum.Nodes {
 func (g *Graph) SetInputs(nodes []*Node) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
 	g.inputs = nodes
 }
 
@@ -193,7 +194,7 @@ func (g *Graph) nodeExists(n *Node) bool {
 	return false
 }
 
-// AddNode adds a node to the graph ore returns error.
+// AddNode adds a node to the graph or returns error.
 // If the node's graph is the same as g it returns nil.
 // Otherwise, it tries to preserve the ID of the node
 // unless the ID is not set (NoneID) or a node
@@ -303,7 +304,7 @@ func (g *Graph) SetEdge(e *Edge) error {
 			e.to.graph = nil
 			delete(g.nodes, e.to.uid)
 		}
-		return fmt.Errorf("detected cycle when adding edge: %s", e)
+		return fmt.Errorf("cycle detected when adding edge: %s", e)
 	}
 
 	return nil
@@ -444,7 +445,7 @@ func (g *Graph) execNode(ctx context.Context, node *Node, nodeChans map[int64]ch
 	}
 
 	// exec the node
-	if _, err := node.Exec(nodeInputs...); err != nil {
+	if _, err := node.Exec(ctx, nodeInputs...); err != nil {
 		return err
 	}
 
@@ -478,18 +479,18 @@ func (g *Graph) Run(inputs map[string]Value) error {
 		return err
 	}
 
-	ctx := context.Background()
-	eg, ctx := errgroup.WithContext(ctx)
-
 	// Create a map to store the channels for each node
 	nodeChans := make(map[int64]chan struct{})
 	for _, node := range nodes {
 		nodeChans[node.ID()] = make(chan struct{})
 	}
 
+	eg, ctx := errgroup.WithContext(context.Background())
+
 	// Start a goroutine for each node
 	for _, node := range nodes {
-		node := node // Create a new variable for the closure
+		// NOTE: we could also just pass the node UID
+		node := node
 		eg.Go(func() error {
 			return g.execNode(ctx, node, nodeChans)
 		})

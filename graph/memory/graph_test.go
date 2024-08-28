@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -311,13 +312,15 @@ func TestGraphTopoSort(t *testing.T) {
 	}
 }
 
+const testOpKey = "test"
+
 type testOp struct{}
 
 func (t testOp) Type() string { return "testOp" }
 func (t testOp) Desc() string { return "testOp sets inputs to outputs" }
 
-func (t testOp) Do(inputs ...Value) (Value, error) {
-	return Value{"inputs": inputs}, nil
+func (t testOp) Do(_ context.Context, inputs ...Value) (Value, error) {
+	return Value{testOpKey: inputs}, nil
 }
 
 func TestGraphRun(t *testing.T) {
@@ -388,7 +391,7 @@ func TestGraphRun(t *testing.T) {
 			return
 		}
 		output := outputs[0]
-		inputs, ok := output["inputs"].([]Value)
+		inputs, ok := output[testOpKey].([]Value)
 		if !ok {
 			t.Errorf("Node %d: output is not of type []Input", n.ID())
 			return

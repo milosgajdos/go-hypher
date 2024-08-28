@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"image/color"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
-
 	gonum "gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 
@@ -30,6 +30,7 @@ type Edge struct {
 	weight float64
 	attrs  map[string]any
 	style  style.Style
+	mu     sync.RWMutex
 }
 
 // NewEdge creates a new edge and returns it.
@@ -66,47 +67,74 @@ func NewEdge(from, to *Node, opts ...Option) (*Edge, error) {
 }
 
 // UID returns edge UID.
-func (e Edge) UID() string {
+func (e *Edge) UID() string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
 	return e.uid
 }
 
 // SetUID sets edge UID.
 func (e *Edge) SetUID(uid string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	e.uid = uid
 }
 
 // Label returns edge label.
-func (e Edge) Label() string {
+func (e *Edge) Label() string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
 	return e.label
 }
 
 // SetLabel sets edge label.
 func (e *Edge) SetLabel(l string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	e.label = l
 }
 
 // From returns the from node of the first non-nil edge, or nil.
 func (e *Edge) From() gonum.Node {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
 	return e.from
 }
 
 // To returns the to node of the first non-nil edge, or nil.
 func (e *Edge) To() gonum.Node {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
 	return e.to
 }
 
 // Weight returns edge weight
-func (e Edge) Weight() float64 {
+func (e *Edge) Weight() float64 {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
 	return e.weight
 }
 
 // SetWeight sets edge weight.
 func (e *Edge) SetWeight(w float64) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	e.weight = w
 }
 
 // ReversedEdge returns a new edge with end points of the pair swapped.
 func (e *Edge) ReversedEdge() gonum.Edge {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
 	return &Edge{
 		uid:    e.uid,
 		from:   e.to,
@@ -120,26 +148,32 @@ func (e *Edge) ReversedEdge() gonum.Edge {
 
 // Attrs returns node attributes.
 func (e *Edge) Attrs() map[string]any {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
 	return e.attrs
 }
 
 // Style returns edge style.
-func (e Edge) Style() string {
+func (e *Edge) Style() string {
 	return e.style.Type
 }
 
 // Shape returns edge shape.
-func (e Edge) Shape() string {
+func (e *Edge) Shape() string {
 	return e.style.Shape
 }
 
 // Color returns edge color.
-func (e Edge) Color() color.RGBA {
+func (e *Edge) Color() color.RGBA {
 	return e.style.Color
 }
 
 // Attributes returns node DOT attributes.
-func (e Edge) Attributes() []encoding.Attribute {
+func (e *Edge) Attributes() []encoding.Attribute {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
 	a := attrs.ToStringMap(e.attrs)
 	attributes := make([]encoding.Attribute, len(a))
 
@@ -152,9 +186,11 @@ func (e Edge) Attributes() []encoding.Attribute {
 }
 
 // String implements fmt.Stringer.
-func (e Edge) String() string {
-	var b strings.Builder
+func (e *Edge) String() string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 
+	var b strings.Builder
 	fmt.Fprintf(&b, "Edge: %s\n", e.label)
 	fmt.Fprintf(&b, "  UID: %s\n", e.uid)
 	fmt.Fprintf(&b, "  From: Node(%d/%s)\n", e.from.ID(), e.from.UID())
