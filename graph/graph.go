@@ -21,6 +21,18 @@ type Graph interface {
 	Attrs() map[string]any
 }
 
+// DOTNGraph is Graphviz DOT graph.
+type DOTGraph interface {
+	Graph
+	encoding.Attributer
+	// DOTID returns DOT ID.
+	DOTID() string
+	// SetDOTID sets DOT ID.
+	SetDOTID(dotid string)
+	// DOTAttributers sets DOT graph attributes.
+	DOTAttributers() (graph, node, edge encoding.Attributer)
+}
+
 // Node is a graph node.
 type Node interface {
 	graph.Node

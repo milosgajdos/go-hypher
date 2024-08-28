@@ -10,9 +10,11 @@ import (
 	"golang.org/x/sync/errgroup"
 	"gonum.org/v1/gonum/graph"
 	gonum "gonum.org/v1/gonum/graph"
+	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/topo"
 
+	"github.com/milosgajdos/go-hypher/graph/attrs"
 	"github.com/milosgajdos/go-hypher/graph/style"
 )
 
@@ -26,6 +28,7 @@ type Graph struct {
 	*simple.WeightedDirectedGraph
 	// graph metadata
 	uid   string
+	dotid string
 	label string
 	attrs map[string]any
 	// node cache
@@ -38,8 +41,10 @@ type Graph struct {
 
 // NewGraph creates a new graph and returns it.
 func NewGraph(opts ...Option) (*Graph, error) {
+	uid := uuid.New().String()
 	gopts := Options{
-		UID:    uuid.New().String(),
+		UID:    uid,
+		DotID:  uid,
 		Label:  DefaultGraphLabel,
 		Weight: DefaultEdgeWeight,
 		Attrs:  make(map[string]any),
@@ -52,6 +57,7 @@ func NewGraph(opts ...Option) (*Graph, error) {
 	return &Graph{
 		WeightedDirectedGraph: simple.NewWeightedDirectedGraph(gopts.Weight, 0.0),
 		uid:                   gopts.UID,
+		dotid:                 gopts.DotID,
 		label:                 gopts.Label,
 		attrs:                 gopts.Attrs,
 		nodes:                 make(map[string]int64),
@@ -96,6 +102,49 @@ func (g *Graph) Attrs() map[string]any {
 	defer g.mu.RUnlock()
 
 	return g.attrs
+}
+
+// DOTID returns GraphVIz DOT ID.
+func (g *Graph) DOTID() string {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	return g.dotid
+}
+
+// SetDOTID sets GraphVIz DOT ID.
+func (g *Graph) SetDOTID(dotid string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.dotid = dotid
+}
+
+// DOTAttributers are graph.Graph values that specify top-level DOT attributes
+func (g *Graph) DOTAttributers() (graph, node, edge encoding.Attributer) {
+	// TODO: figure out node and edge top level attributes
+	return g, nil, nil
+}
+
+// Attributes returns graph DOT attributes.
+func (g *Graph) Attributes() []encoding.Attribute {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	styleAttrs := []encoding.Attribute{
+		{Key: "label", Value: g.label},
+		{Key: "labelloc", Value: "t"},
+	}
+
+	a := attrs.ToStringMap(g.attrs)
+	attributes := make([]encoding.Attribute, 0, len(a))
+
+	for k, v := range a {
+		attributes = append(attributes, encoding.Attribute{Key: k, Value: v})
+	}
+	attributes = append(attributes, styleAttrs...)
+
+	return attributes
 }
 
 // HasEdgeFromTo returns whether an edge exist between two nodoes with the given IDs.
@@ -155,9 +204,9 @@ func (g *Graph) NewNode(opts ...Option) (*Node, error) {
 		ID:    NoneID,
 		UID:   uid,
 		DotID: uid,
-		Label: DefaultNodeLabel,
 		Attrs: make(map[string]any),
 		Style: style.DefaultNode(),
+		Op:    NoOp{},
 	}
 
 	for _, apply := range opts {
@@ -171,6 +220,8 @@ func (g *Graph) NewNode(opts ...Option) (*Node, error) {
 		label:   nopts.Label,
 		attrs:   nopts.Attrs,
 		graph:   g,
+		style:   nopts.Style,
+		op:      nopts.Op,
 		inputs:  []Value{},
 		outputs: []Value{},
 	}
@@ -231,9 +282,9 @@ func (g *Graph) AddNode(n *Node) error {
 func (g *Graph) NewEdge(from, to *Node, opts ...Option) (*Edge, error) {
 	eopts := Options{
 		UID:    uuid.New().String(),
-		Label:  DefaultEdgeLabel,
 		Weight: DefaultEdgeWeight,
 		Attrs:  make(map[string]any),
+		Style:  style.DefaultEdge(),
 	}
 
 	for _, apply := range opts {
@@ -247,6 +298,7 @@ func (g *Graph) NewEdge(from, to *Node, opts ...Option) (*Edge, error) {
 		weight: eopts.Weight,
 		label:  eopts.Label,
 		attrs:  eopts.Attrs,
+		style:  eopts.Style,
 	}
 
 	if err := g.SetEdge(edge); err != nil {

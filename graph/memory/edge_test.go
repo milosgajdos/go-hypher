@@ -61,8 +61,8 @@ func TestNewEdge(t *testing.T) {
 		t.Errorf("expected label: %s, got: %s", newLabel, l)
 	}
 
-	if s := e.Style(); s != style.DefaultStyleType {
-		t.Errorf("expected style: %s, got: %s", style.DefaultStyleType, s)
+	if s := e.Style(); s != style.DefaultNodeStyleType {
+		t.Errorf("expected style: %s, got: %s", style.DefaultNodeStyleType, s)
 	}
 
 	if s := e.Shape(); s != style.DefaultEdgeShape {

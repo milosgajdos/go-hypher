@@ -8,14 +8,16 @@ var (
 	// DefaultEdgeColor is default edge color.
 	DefaultEdgeColor = color.RGBA{R: 0, G: 0, B: 0}
 	// DefaultNodeColor is default color for unknown entity.
-	DefaultNodeColor = color.RGBA{R: 255, G: 255, B: 255}
+	DefaultNodeColor = color.RGBA{R: 230, G: 230, B: 230}
 )
 
 const (
-	// DefaultStyleType is default style type.
-	DefaultStyleType = "filling"
+	// DefaultNodeStyleType is default style type.
+	DefaultNodeStyleType = "rounded,filled,solid"
 	// DefaultNodeShape is default node shape.
 	DefaultNodeShape = "hexagon"
+	// DefaultEdgeStyleType is default edge style.
+	DefaultEdgeStyleType = ""
 	// EdgeShape is default edge shape.
 	DefaultEdgeShape = "normal"
 	// UnknownShape is unknown shape.
@@ -35,7 +37,7 @@ type Style struct {
 // DefaultNode returns default node style
 func DefaultNode() Style {
 	return Style{
-		Type:  DefaultStyleType,
+		Type:  DefaultNodeStyleType,
 		Shape: DefaultNodeShape,
 		Color: DefaultNodeColor,
 	}
@@ -44,7 +46,7 @@ func DefaultNode() Style {
 // DefaultEdge returns default edge style
 func DefaultEdge() Style {
 	return Style{
-		Type:  DefaultStyleType,
+		Type:  DefaultEdgeStyleType,
 		Shape: DefaultEdgeShape,
 		Color: DefaultEdgeColor,
 	}

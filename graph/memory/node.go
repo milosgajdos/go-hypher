@@ -50,7 +50,6 @@ func NewNode(opts ...Option) (*Node, error) {
 		ID:    NoneID,
 		UID:   uid,
 		DotID: uid,
-		Label: DefaultNodeLabel,
 		Attrs: make(map[string]any),
 		Style: style.DefaultNode(),
 		Op:    NoOp{},
@@ -204,14 +203,20 @@ func (n *Node) Attributes() []encoding.Attribute {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
-	a := attrs.ToStringMap(n.attrs)
-	attributes := make([]encoding.Attribute, len(a))
-
-	i := 0
-	for k, v := range a {
-		attributes[i] = encoding.Attribute{Key: k, Value: v}
-		i++
+	styleAttrs := []encoding.Attribute{
+		{Key: "label", Value: n.label},
+		{Key: "shape", Value: n.style.Shape},
+		{Key: "style", Value: n.style.Type},
 	}
+
+	a := attrs.ToStringMap(n.attrs)
+	attributes := make([]encoding.Attribute, 0, len(a))
+
+	for k, v := range a {
+		attributes = append(attributes, encoding.Attribute{Key: k, Value: v})
+	}
+	attributes = append(attributes, styleAttrs...)
+
 	return attributes
 }
 
