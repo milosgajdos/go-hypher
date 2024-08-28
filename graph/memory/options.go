@@ -18,8 +18,6 @@ type Options struct {
 	Attrs map[string]interface{}
 	// DotID configures DOT ID
 	DotID string
-	// Type is graph type
-	Type string
 	// Weight configures weight.
 	Weight float64
 	// Graph configures node's graph
@@ -65,13 +63,6 @@ func WithAttrs(attrs map[string]interface{}) Option {
 func WithDotID(dotid string) Option {
 	return func(o *Options) {
 		o.DotID = dotid
-	}
-}
-
-// WithType sets Type option.
-func WithType(t string) Option {
-	return func(o *Options) {
-		o.Type = t
 	}
 }
 
