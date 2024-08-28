@@ -29,36 +29,30 @@ func NewMarshaler(name, prefix, indent string) (*Marshaler, error) {
 // SigmaJS. See here for more: http://sigmajs.org/
 func (m *Marshaler) Marshal(g graph.Graph) ([]byte, error) {
 	c := sigmajs.Graph{
-		Nodes: make([]sigmajs.Node, g.Nodes().Len()),
-		Edges: make([]sigmajs.Edge, g.Edges().Len()),
+		Nodes: make([]sigmajs.Node, 0, g.Nodes().Len()),
+		Edges: make([]sigmajs.Edge, 0, g.Edges().Len()),
 	}
 
 	nodes := g.Nodes()
-	i := 0
 	for nodes.Next() {
 		n := nodes.Node().(graph.Node)
 
-		c.Nodes[i] = sigmajs.Node{
+		c.Nodes = append(c.Nodes, sigmajs.Node{
 			ID:         fmt.Sprint(n.ID()),
 			Attributes: n.Attrs(),
-		}
-
-		i++
+		})
 	}
 
 	edges := g.Edges()
-	i = 0
 	for edges.Next() {
 		e := edges.Edge().(graph.Edge)
 
-		c.Edges[i] = sigmajs.Edge{
-			ID:         fmt.Sprint(i),
+		c.Edges = append(c.Edges, sigmajs.Edge{
+			ID:         e.UID(),
 			Source:     fmt.Sprint(e.From().ID()),
 			Target:     fmt.Sprint(e.To().ID()),
 			Attributes: e.Attrs(),
-		}
-
-		i++
+		})
 	}
 
 	return json.MarshalIndent(c, m.prefix, m.indent)

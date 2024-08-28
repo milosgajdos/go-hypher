@@ -29,12 +29,11 @@ func NewMarshaler(name, prefix, indent string) (*Marshaler, error) {
 // CytoscapJS https://js.cytoscape.org/
 func (m *Marshaler) Marshal(g graph.Graph) ([]byte, error) {
 	c := cytoscapejs.Elements{
-		Nodes: make([]cytoscapejs.Node, g.Nodes().Len()),
-		Edges: make([]cytoscapejs.Edge, g.Edges().Len()),
+		Nodes: make([]cytoscapejs.Node, 0, g.Nodes().Len()),
+		Edges: make([]cytoscapejs.Edge, 0, g.Edges().Len()),
 	}
 
 	nodes := g.Nodes()
-	i := 0
 	for nodes.Next() {
 		n := nodes.Node().(graph.Node)
 
@@ -43,32 +42,27 @@ func (m *Marshaler) Marshal(g graph.Graph) ([]byte, error) {
 			Attributes: n.Attrs(),
 		}
 
-		c.Nodes[i] = cytoscapejs.Node{
+		c.Nodes = append(c.Nodes, cytoscapejs.Node{
 			Data:       ndata,
 			Selectable: true,
-		}
-
-		i++
+		})
 	}
 
 	edges := g.Edges()
-	i = 0
 	for edges.Next() {
 		e := edges.Edge().(graph.Edge)
 
 		edata := cytoscapejs.EdgeData{
-			ID:         fmt.Sprint(i),
+			ID:         e.UID(),
 			Source:     fmt.Sprint(e.From().ID()),
 			Target:     fmt.Sprint(e.To().ID()),
 			Attributes: e.Attrs(),
 		}
 
-		c.Edges[i] = cytoscapejs.Edge{
+		c.Edges = append(c.Edges, cytoscapejs.Edge{
 			Data:       edata,
 			Selectable: true,
-		}
-
-		i++
+		})
 	}
 
 	return json.MarshalIndent(c, m.prefix, m.indent)
