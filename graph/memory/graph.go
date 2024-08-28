@@ -15,7 +15,6 @@ import (
 	"gonum.org/v1/gonum/graph/topo"
 
 	"github.com/milosgajdos/go-hypher/graph/attrs"
-	"github.com/milosgajdos/go-hypher/graph/style"
 )
 
 const (
@@ -199,38 +198,8 @@ func (g *Graph) Outputs() []*Node {
 // NewNode creates a new node and adds it to the graph.
 // It returns the new node or fails with error.
 func (g *Graph) NewNode(opts ...Option) (*Node, error) {
-	uid := uuid.New().String()
-	nopts := Options{
-		ID:    NoneID,
-		UID:   uid,
-		DotID: uid,
-		Attrs: make(map[string]any),
-		Style: style.DefaultNode(),
-		Op:    NoOp{},
-	}
-
-	for _, apply := range opts {
-		apply(&nopts)
-	}
-
-	node := &Node{
-		id:      NoneID,
-		uid:     nopts.UID,
-		dotid:   nopts.DotID,
-		label:   nopts.Label,
-		attrs:   nopts.Attrs,
-		graph:   g,
-		style:   nopts.Style,
-		op:      nopts.Op,
-		inputs:  []Value{},
-		outputs: []Value{},
-	}
-
-	if err := g.AddNode(node); err != nil {
-		return nil, err
-	}
-
-	return node, nil
+	opts = append(opts, WithGraph(g))
+	return NewNode(opts...)
 }
 
 // nodeExists returns true if the node already exists in g.
@@ -280,32 +249,8 @@ func (g *Graph) AddNode(n *Node) error {
 // NewEdge creates a new edge link its node in the graph.
 // It returns the new edge or fails with error.
 func (g *Graph) NewEdge(from, to *Node, opts ...Option) (*Edge, error) {
-	eopts := Options{
-		UID:    uuid.New().String(),
-		Weight: DefaultEdgeWeight,
-		Attrs:  make(map[string]any),
-		Style:  style.DefaultEdge(),
-	}
-
-	for _, apply := range opts {
-		apply(&eopts)
-	}
-
-	edge := &Edge{
-		uid:    eopts.UID,
-		from:   from,
-		to:     to,
-		weight: eopts.Weight,
-		label:  eopts.Label,
-		attrs:  eopts.Attrs,
-		style:  eopts.Style,
-	}
-
-	if err := g.SetEdge(edge); err != nil {
-		return nil, err
-	}
-
-	return edge, nil
+	opts = append(opts, WithGraph(g))
+	return NewEdge(from, to, opts...)
 }
 
 // SetEdge adds the edge e to the graph linking the edge nodes.
