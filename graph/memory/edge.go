@@ -16,7 +16,7 @@ import (
 
 const (
 	// DefaultEdgeLabel is the default edge label.
-	DefaultEdgeLabel = "InMemoryEdge"
+	DefaultEdgeLabel = "HypherEdge"
 	// DefaultEdgeWeight is the default edge weight.
 	DefaultEdgeWeight = 1.0
 )
@@ -174,14 +174,20 @@ func (e *Edge) Attributes() []encoding.Attribute {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
-	a := attrs.ToStringMap(e.attrs)
-	attributes := make([]encoding.Attribute, len(a))
-
-	i := 0
-	for k, v := range a {
-		attributes[i] = encoding.Attribute{Key: k, Value: v}
-		i++
+	styleAttrs := []encoding.Attribute{
+		{Key: "label", Value: e.label},
+		{Key: "shape", Value: e.style.Shape},
+		{Key: "style", Value: e.style.Type},
 	}
+
+	a := attrs.ToStringMap(e.attrs)
+	attributes := make([]encoding.Attribute, 0, len(a))
+
+	for k, v := range a {
+		attributes = append(attributes, encoding.Attribute{Key: k, Value: v})
+	}
+	attributes = append(attributes, styleAttrs...)
+
 	return attributes
 }
 

@@ -41,6 +41,7 @@ func GraphDeepCopy(g *Graph) *Graph {
 	cg := &Graph{
 		WeightedDirectedGraph: simple.NewWeightedDirectedGraph(DefaultEdgeWeight, 0.0),
 		uid:                   g.uid,
+		dotid:                 g.dotid,
 		label:                 g.label,
 		attrs:                 maps.Clone(g.attrs),
 		nodes:                 maps.Clone(g.nodes),

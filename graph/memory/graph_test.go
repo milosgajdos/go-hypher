@@ -57,7 +57,7 @@ func TestNewGraphWithOpts(t *testing.T) {
 		WithAttrs(attrs),
 	)
 	if err != nil {
-		t.Fatalf("failed to create new stars graph: %v", err)
+		t.Fatalf("failed to create new graph: %v", err)
 	}
 
 	if u := g.UID(); u != uid {

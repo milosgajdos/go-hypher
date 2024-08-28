@@ -1,14 +1,9 @@
 package attrs
 
 import (
-	"errors"
 	"fmt"
 	"image/color"
 	"time"
-)
-
-var (
-	ErrInvalidInput = errors.New("invalid input")
 )
 
 // isStringly checks if a is either a string

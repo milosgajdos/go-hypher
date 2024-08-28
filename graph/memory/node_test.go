@@ -40,8 +40,8 @@ func TestNewNode(t *testing.T) {
 		t.Error("expected nil graph")
 	}
 
-	if s := n.Type(); s != style.DefaultStyleType {
-		t.Errorf("expected type: %s, got: %s", style.DefaultStyleType, s)
+	if s := n.Type(); s != style.DefaultNodeStyleType {
+		t.Errorf("expected type: %s, got: %s", style.DefaultNodeStyleType, s)
 	}
 
 	if s := n.Shape(); s != style.DefaultNodeShape {
