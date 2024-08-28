@@ -8,12 +8,12 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
-	"gonum.org/v1/gonum/graph"
 	gonum "gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/topo"
 
+	"github.com/milosgajdos/go-hypher/graph"
 	"github.com/milosgajdos/go-hypher/graph/attrs"
 )
 
@@ -120,8 +120,8 @@ func (g *Graph) SetDOTID(dotid string) {
 }
 
 // DOTAttributers are graph.Graph values that specify top-level DOT attributes
+// TODO: figure out node and edge top level attributes
 func (g *Graph) DOTAttributers() (graph, node, edge encoding.Attributer) {
-	// TODO: figure out node and edge top level attributes
 	return g, nil, nil
 }
 
@@ -248,7 +248,7 @@ func (g *Graph) AddNode(n *Node) error {
 
 // NewEdge creates a new edge link its node in the graph.
 // It returns the new edge or fails with error.
-func (g *Graph) NewEdge(from, to *Node, opts ...Option) (*Edge, error) {
+func (g *Graph) NewEdge(from, to graph.Node, opts ...Option) (*Edge, error) {
 	opts = append(opts, WithGraph(g))
 	return NewEdge(from, to, opts...)
 }
@@ -256,9 +256,19 @@ func (g *Graph) NewEdge(from, to *Node, opts ...Option) (*Edge, error) {
 // SetEdge adds the edge e to the graph linking the edge nodes.
 // It adds the edge nodes to the graph if they don't already exist.
 // It returns error if the new edge creates a graph cycle.
-func (g *Graph) SetEdge(e *Edge) error {
+func (g *Graph) SetEdge(e graph.Edge) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
+	fromNode, ok := e.From().(*Node)
+	if !ok {
+		return fmt.Errorf("invalid from node: %T", e.From())
+	}
+
+	toNode, ok := e.To().(*Node)
+	if !ok {
+		return fmt.Errorf("invalid from node: %T", e.To())
+	}
 
 	if edge := g.Edge(e.From().ID(), e.To().ID()); edge != nil {
 		return nil
@@ -268,18 +278,19 @@ func (g *Graph) SetEdge(e *Edge) error {
 
 	// if the nodes do not exist in the graph we must create them
 	// we can't create an edge between nodes that are not in the graph.
-	if e.from.ID() == NoneID || g.Node(e.from.ID()) == nil {
-		e.from.id = g.WeightedDirectedGraph.NewNode().ID()
-		e.from.graph = g
-		g.WeightedDirectedGraph.AddNode(e.from)
-		g.nodes[e.from.UID()] = e.from.ID()
+	if fromNode.ID() == NoneID || g.Node(fromNode.ID()) == nil {
+		fromNode.id = g.WeightedDirectedGraph.NewNode().ID()
+		fromNode.graph = g
+		g.WeightedDirectedGraph.AddNode(fromNode)
+		g.nodes[fromNode.UID()] = fromNode.ID()
 		fromAdded = true
 	}
-	if e.to.ID() == NoneID || g.Node(e.to.ID()) == nil {
-		e.to.id = g.WeightedDirectedGraph.NewNode().ID()
-		e.to.graph = g
-		g.WeightedDirectedGraph.AddNode(e.to)
-		g.nodes[e.to.UID()] = e.to.ID()
+
+	if toNode.ID() == NoneID || g.Node(toNode.ID()) == nil {
+		toNode.id = g.WeightedDirectedGraph.NewNode().ID()
+		toNode.graph = g
+		g.WeightedDirectedGraph.AddNode(toNode)
+		g.nodes[toNode.UID()] = toNode.ID()
 		toAdded = true
 	}
 	g.SetWeightedEdge(e)
@@ -287,19 +298,19 @@ func (g *Graph) SetEdge(e *Edge) error {
 	// check if there is a cycle
 	if topo.PathExistsIn(g, g.Node(e.To().ID()), g.Node(e.From().ID())) {
 		// remove the edge and the nodes that have just been created
-		g.RemoveEdge(e.from.ID(), e.to.ID())
+		g.RemoveEdge(fromNode.ID(), toNode.ID())
 		// remove nodes if they had been created
 		if fromAdded {
-			g.RemoveNode(e.from.ID())
-			e.from.id = NoneID
-			e.from.graph = nil
-			delete(g.nodes, e.from.uid)
+			g.RemoveNode(fromNode.ID())
+			fromNode.id = NoneID
+			fromNode.graph = nil
+			delete(g.nodes, fromNode.uid)
 		}
 		if toAdded {
-			g.RemoveNode(e.to.ID())
-			e.to.id = NoneID
-			e.to.graph = nil
-			delete(g.nodes, e.to.uid)
+			g.RemoveNode(toNode.ID())
+			toNode.id = NoneID
+			toNode.graph = nil
+			delete(g.nodes, toNode.uid)
 		}
 		return fmt.Errorf("cycle detected when adding edge: %s", e)
 	}
@@ -321,7 +332,7 @@ func (g *Graph) buildSubGraph(sg *Graph, n *Node, outputNodes map[int64]struct{}
 
 	nodeInPathToOut := false
 
-	for _, succ := range graph.NodesOf(g.From(n.ID())) {
+	for _, succ := range gonum.NodesOf(g.From(n.ID())) {
 		succNode := succ.(*Node)
 		succInPathToOut, err := g.buildSubGraph(sg, succNode, outputNodes)
 		if err != nil {

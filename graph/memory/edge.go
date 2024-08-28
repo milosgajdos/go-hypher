@@ -10,6 +10,7 @@ import (
 	gonum "gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 
+	"github.com/milosgajdos/go-hypher/graph"
 	"github.com/milosgajdos/go-hypher/graph/attrs"
 	"github.com/milosgajdos/go-hypher/graph/style"
 )
@@ -25,8 +26,8 @@ const (
 type Edge struct {
 	uid    string
 	label  string
-	from   *Node
-	to     *Node
+	from   graph.Node
+	to     graph.Node
 	weight float64
 	attrs  map[string]any
 	style  style.Style
@@ -34,7 +35,7 @@ type Edge struct {
 }
 
 // NewEdge creates a new edge and returns it.
-func NewEdge(from, to *Node, opts ...Option) (*Edge, error) {
+func NewEdge(from, to graph.Node, opts ...Option) (*Edge, error) {
 	eopts := Options{
 		UID:    uuid.New().String(),
 		Weight: DefaultEdgeWeight,
