@@ -17,7 +17,7 @@ import (
 
 const (
 	// DefaultNodeLabel is the default node label.
-	DefaultNodeLabel = "InMemoryNode"
+	DefaultNodeLabel = "HypherNode"
 	// NoneID is non-existent ID.
 	// Thanks Go for not having optionals!
 	NoneID int64 = -1
@@ -50,6 +50,7 @@ func NewNode(opts ...Option) (*Node, error) {
 		ID:    NoneID,
 		UID:   uid,
 		DotID: uid,
+		Label: DefaultNodeLabel,
 		Attrs: make(map[string]any),
 		Style: style.DefaultNode(),
 		Op:    NoOp{},

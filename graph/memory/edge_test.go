@@ -33,6 +33,10 @@ func TestNewEdge(t *testing.T) {
 		t.Errorf("expected UID: %s, got: %s", newUID, uid)
 	}
 
+	if e.Label() != DefaultEdgeLabel {
+		t.Errorf("expected label: %s, got: %s", DefaultNodeLabel, e.Label())
+	}
+
 	if e.From() != n1 {
 		t.Errorf("expected From node to be %v, got: %v", n1, e.From())
 	}
@@ -51,18 +55,14 @@ func TestNewEdge(t *testing.T) {
 		t.Errorf("expected weight: %f, got: %f", newWeight, w)
 	}
 
-	if e.Label() != DefaultEdgeLabel {
-		t.Errorf("expected label: %s, got: %s", DefaultEdgeLabel, e.Label())
-	}
-
 	newLabel := "newLabel"
 	e.SetLabel(newLabel)
 	if l := e.Label(); l != newLabel {
 		t.Errorf("expected label: %s, got: %s", newLabel, l)
 	}
 
-	if s := e.Style(); s != style.DefaultNodeStyleType {
-		t.Errorf("expected style: %s, got: %s", style.DefaultNodeStyleType, s)
+	if s := e.Style(); s != style.DefaultEdgeStyleType {
+		t.Errorf("expected style: %s, got: %s", style.DefaultEdgeStyleType, s)
 	}
 
 	if s := e.Shape(); s != style.DefaultEdgeShape {
@@ -104,7 +104,9 @@ func TestNewEdgeWithOptions(t *testing.T) {
 		t.Errorf("expected attributes %v, got: %v", attrs, a)
 	}
 
-	if a := e.Attributes(); len(a) != len(attrs) {
+	// NOTE: we are adding some Style attributes to attrs
+	// so the size of the returned map may be different from attrs.
+	if a := e.Attributes(); len(a) < len(attrs) {
 		t.Errorf("expected attributes count: %d, got: %d", len(attrs), len(a))
 	}
 }

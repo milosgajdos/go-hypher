@@ -23,7 +23,7 @@ func TestDefaultEdge(t *testing.T) {
 	de := DefaultEdge()
 
 	s := Style{
-		Type:  DefaultNodeStyleType,
+		Type:  DefaultEdgeStyleType,
 		Shape: DefaultEdgeShape,
 		Color: DefaultEdgeColor,
 	}

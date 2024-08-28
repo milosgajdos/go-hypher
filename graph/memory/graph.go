@@ -20,7 +20,7 @@ import (
 
 const (
 	// DefaultGraphLabel is the default label.
-	DefaultGraphLabel = "InMemoryGraph"
+	DefaultGraphLabel = "HypherGraph"
 )
 
 // Graph is an in-memory graph.

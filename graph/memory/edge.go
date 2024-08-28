@@ -16,7 +16,7 @@ import (
 
 const (
 	// DefaultEdgeLabel is the default edge label.
-	DefaultEdgeLabel = "InMemoryEdge"
+	DefaultEdgeLabel = "HypherEdge"
 	// DefaultEdgeWeight is the default edge weight.
 	DefaultEdgeWeight = 1.0
 )
@@ -38,6 +38,7 @@ func NewEdge(from, to *Node, opts ...Option) (*Edge, error) {
 	eopts := Options{
 		UID:    uuid.New().String(),
 		Weight: DefaultEdgeWeight,
+		Label:  DefaultEdgeLabel,
 		Attrs:  make(map[string]any),
 		Style:  style.DefaultEdge(),
 	}

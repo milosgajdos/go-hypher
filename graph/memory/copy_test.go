@@ -15,7 +15,7 @@ func TestCopy(t *testing.T) {
 		g2 := GraphDeepCopy(g)
 
 		if !reflect.DeepEqual(g, g2) {
-			t.Fatal("expected graphs to be equal")
+			t.Fatalf("expected graphs to be equal g: %#v, g2: %#v", g, g2)
 		}
 	})
 
