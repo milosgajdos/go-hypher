@@ -1,4 +1,4 @@
-package attrs
+package graph
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ func isStringly(a any) (bool, string) {
 	}
 }
 
-// ToString attempts to convert well known attributes to string.
+// toString attempts to convert well known attributes to string.
 // The following attributes are considered as well known:
 //   - color
 //   - date
@@ -38,7 +38,7 @@ func isStringly(a any) (bool, string) {
 //   - weight string representation
 //
 // If an unknown attribute key is supplied an empty string is returned.
-func ToString(k string, v any) string {
+func toString(k string, v any) string {
 	switch k {
 	case "color":
 		if c, ok := v.(color.RGBA); ok {
@@ -65,13 +65,13 @@ func ToString(k string, v any) string {
 
 // NOTE(milosgajdos): we should turn map[string]any into proper type.
 
-// ToStringMap attempts to convert a to a map of strings.
+// AttrsToStringMap attempts to convert a map to a map of strings.
 // It first checks if the stored attribute value is stringly i.e. either of string,
 // fmt.Stringer or fmt.GoStringer. If it is it returns its stringe representation.
 // If the attribute value is not stringly we attempt to convert well known attributes to strings.
 // If the attribute is neither stringly nor is it known how to convert it to a string
 // the attribute is omitted from the returned map.
-func ToStringMap(a map[string]any) map[string]string {
+func AttrsToStringMap(a map[string]any) map[string]string {
 	m := make(map[string]string)
 
 	for k, v := range a {
@@ -80,7 +80,7 @@ func ToStringMap(a map[string]any) map[string]string {
 			m[k] = val
 		}
 
-		val = ToString(k, v)
+		val = toString(k, v)
 		if val != "" {
 			m[k] = val
 		}

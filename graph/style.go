@@ -1,4 +1,4 @@
-package style
+package graph
 
 import (
 	"image/color"
@@ -34,8 +34,8 @@ type Style struct {
 	Color color.RGBA
 }
 
-// DefaultNode returns default node style
-func DefaultNode() Style {
+// DefaultNodeStyle returns default node style
+func DefaultNodeStyle() Style {
 	return Style{
 		Type:  DefaultNodeStyleType,
 		Shape: DefaultNodeShape,
@@ -43,8 +43,8 @@ func DefaultNode() Style {
 	}
 }
 
-// DefaultEdge returns default edge style
-func DefaultEdge() Style {
+// DefaultEdgeStyle returns default edge style
+func DefaultEdgeStyle() Style {
 	return Style{
 		Type:  DefaultEdgeStyleType,
 		Shape: DefaultEdgeShape,

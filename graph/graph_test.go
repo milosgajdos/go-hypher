@@ -1,10 +1,12 @@
-package memory
+package graph
 
 import (
 	"context"
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/milosgajdos/go-hypher"
 )
 
 func MustGraph(t *testing.T, opts ...Option) *Graph {
@@ -319,8 +321,8 @@ type testOp struct{}
 func (t testOp) Type() string { return "testOp" }
 func (t testOp) Desc() string { return "testOp sets inputs to outputs" }
 
-func (t testOp) Do(_ context.Context, inputs ...Value) (Value, error) {
-	return Value{testOpKey: inputs}, nil
+func (t testOp) Do(_ context.Context, inputs ...hypher.Value) (hypher.Value, error) {
+	return hypher.Value{testOpKey: inputs}, nil
 }
 
 func TestGraphRun(t *testing.T) {
@@ -347,13 +349,13 @@ func TestGraphRun(t *testing.T) {
 	g.SetOutputs([]*Node{n5})
 
 	// node inputs
-	_ = n1.SetInputs(Value{"ID": n1.ID()})
-	_ = n3.SetInputs(Value{"ID": n3.ID()})
-	_ = n4.SetInputs(Value{"ID": n4.ID()})
-	_ = n5.SetInputs(Value{"ID": n5.ID()})
-	_ = n6.SetInputs(Value{"ID": n6.ID()})
+	_ = n1.SetInputs(hypher.Value{"ID": n1.ID()})
+	_ = n3.SetInputs(hypher.Value{"ID": n3.ID()})
+	_ = n4.SetInputs(hypher.Value{"ID": n4.ID()})
+	_ = n5.SetInputs(hypher.Value{"ID": n5.ID()})
+	_ = n6.SetInputs(hypher.Value{"ID": n6.ID()})
 
-	graphInputs := map[string]Value{
+	graphInputs := map[string]hypher.Value{
 		n0.UID(): {"ID": n0.ID()},
 		n2.UID(): {"ID": n2.ID()},
 	}
@@ -391,7 +393,7 @@ func TestGraphRun(t *testing.T) {
 			return
 		}
 		output := outputs[0]
-		inputs, ok := output[testOpKey].([]Value)
+		inputs, ok := output[testOpKey].([]hypher.Value)
 		if !ok {
 			t.Errorf("Node %d: output is not of type []Input", n.ID())
 			return

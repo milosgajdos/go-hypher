@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/milosgajdos/go-hypher/graph"
+	"github.com/milosgajdos/go-hypher"
 )
 
 // Syncer syncs graph to sqlite.
@@ -22,7 +22,7 @@ func NewSyncer(db *DB) (*Syncer, error) {
 }
 
 // Sync sync graph g to sqlite DB.
-func (s *Syncer) Sync(ctx context.Context, g graph.Graph) error {
+func (s *Syncer) Sync(ctx context.Context, g hypher.Graph) error {
 	tx, err := s.db.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (s *Syncer) Sync(ctx context.Context, g graph.Graph) error {
 
 	nodes := g.Nodes()
 	for nodes.Next() {
-		n, ok := nodes.Node().(graph.Node)
+		n, ok := nodes.Node().(hypher.Node)
 		if !ok {
 			continue
 		}
@@ -47,7 +47,7 @@ func (s *Syncer) Sync(ctx context.Context, g graph.Graph) error {
 
 	edges := g.Edges()
 	for edges.Next() {
-		e, ok := edges.Edge().(graph.Edge)
+		e, ok := edges.Edge().(hypher.Edge)
 		if !ok {
 			continue
 		}
@@ -60,7 +60,7 @@ func (s *Syncer) Sync(ctx context.Context, g graph.Graph) error {
 }
 
 // syncGraph initializes the graph entry in the database.
-func (s *Syncer) syncGraph(ctx context.Context, tx *sql.Tx, g graph.Graph) error {
+func (s *Syncer) syncGraph(ctx context.Context, tx *sql.Tx, g hypher.Graph) error {
 	attrs, err := json.Marshal(g.Attrs())
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func (s *Syncer) syncGraph(ctx context.Context, tx *sql.Tx, g graph.Graph) error
 }
 
 // syncNode stores node in the sqlite DB.
-func (s *Syncer) syncNode(ctx context.Context, tx *sql.Tx, graphUID string, n graph.Node) error {
+func (s *Syncer) syncNode(ctx context.Context, tx *sql.Tx, graphUID string, n hypher.Node) error {
 	createdAt := time.Now()
 	updatedAt := createdAt
 
@@ -127,7 +127,7 @@ func (s *Syncer) syncNode(ctx context.Context, tx *sql.Tx, graphUID string, n gr
 }
 
 // syncEdge stores edge in the sqlite DB.
-func (s *Syncer) syncEdge(ctx context.Context, tx *sql.Tx, graphUID string, e graph.Edge) error {
+func (s *Syncer) syncEdge(ctx context.Context, tx *sql.Tx, graphUID string, e hypher.Edge) error {
 	createdAt := time.Now()
 	updatedAt := createdAt
 
@@ -137,8 +137,8 @@ func (s *Syncer) syncEdge(ctx context.Context, tx *sql.Tx, graphUID string, e gr
 	}
 
 	// Retrieve source and target node UIDs directly
-	sourceUID := e.From().(graph.Node).UID()
-	targetUID := e.To().(graph.Node).UID()
+	sourceUID := e.From().(hypher.Node).UID()
+	targetUID := e.To().(hypher.Node).UID()
 
 	// Execute insertion query.
 	_, err = tx.ExecContext(ctx, `

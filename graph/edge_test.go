@@ -1,10 +1,8 @@
-package memory
+package graph
 
 import (
 	"reflect"
 	"testing"
-
-	"github.com/milosgajdos/go-hypher/graph/style"
 )
 
 // MustEdge creates a new Edge and returns it, panicking if there's an error.
@@ -61,16 +59,16 @@ func TestNewEdge(t *testing.T) {
 		t.Errorf("expected label: %s, got: %s", newLabel, l)
 	}
 
-	if s := e.Style(); s != style.DefaultEdgeStyleType {
-		t.Errorf("expected style: %s, got: %s", style.DefaultEdgeStyleType, s)
+	if s := e.Style(); s != DefaultEdgeStyleType {
+		t.Errorf("expected style: %s, got: %s", DefaultEdgeStyleType, s)
 	}
 
-	if s := e.Shape(); s != style.DefaultEdgeShape {
-		t.Errorf("expected shape: %s, got: %s", style.DefaultEdgeShape, s)
+	if s := e.Shape(); s != DefaultEdgeShape {
+		t.Errorf("expected shape: %s, got: %s", DefaultEdgeShape, s)
 	}
 
-	if c := e.Color(); c != style.DefaultEdgeColor {
-		t.Errorf("expected color: %v, got: %v", style.DefaultEdgeColor, c)
+	if c := e.Color(); c != DefaultEdgeColor {
+		t.Errorf("expected color: %v, got: %v", DefaultEdgeColor, c)
 	}
 }
 

@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/milosgajdos/go-hypher"
 	"gonum.org/v1/gonum/graph/formats/sigmajs"
-
-	"github.com/milosgajdos/go-hypher/graph"
 )
 
 // Marshaler implements graph.Marshaler.
@@ -27,7 +26,7 @@ func NewMarshaler(name, prefix, indent string) (*Marshaler, error) {
 
 // Marshal marshals g into format that can be used by
 // SigmaJS. See here for more: http://sigmajs.org/
-func (m *Marshaler) Marshal(g graph.Graph) ([]byte, error) {
+func (m *Marshaler) Marshal(g hypher.Graph) ([]byte, error) {
 	c := sigmajs.Graph{
 		Nodes: make([]sigmajs.Node, 0, g.Nodes().Len()),
 		Edges: make([]sigmajs.Edge, 0, g.Edges().Len()),
@@ -35,7 +34,7 @@ func (m *Marshaler) Marshal(g graph.Graph) ([]byte, error) {
 
 	nodes := g.Nodes()
 	for nodes.Next() {
-		n := nodes.Node().(graph.Node)
+		n := nodes.Node().(hypher.Node)
 
 		c.Nodes = append(c.Nodes, sigmajs.Node{
 			ID:         fmt.Sprint(n.ID()),
@@ -45,7 +44,7 @@ func (m *Marshaler) Marshal(g graph.Graph) ([]byte, error) {
 
 	edges := g.Edges()
 	for edges.Next() {
-		e := edges.Edge().(graph.Edge)
+		e := edges.Edge().(hypher.Edge)
 
 		c.Edges = append(c.Edges, sigmajs.Edge{
 			ID:         e.UID(),
