@@ -1,4 +1,4 @@
-package style
+package graph
 
 import (
 	"reflect"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestDefaultNode(t *testing.T) {
-	dn := DefaultNode()
+	dn := DefaultNodeStyle()
 
 	s := Style{
 		Type:  DefaultNodeStyleType,
@@ -20,7 +20,7 @@ func TestDefaultNode(t *testing.T) {
 }
 
 func TestDefaultEdge(t *testing.T) {
-	de := DefaultEdge()
+	de := DefaultEdgeStyle()
 
 	s := Style{
 		Type:  DefaultEdgeStyleType,

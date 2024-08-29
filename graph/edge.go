@@ -1,4 +1,4 @@
-package memory
+package graph
 
 import (
 	"fmt"
@@ -10,9 +10,7 @@ import (
 	gonum "gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 
-	"github.com/milosgajdos/go-hypher/graph"
-	"github.com/milosgajdos/go-hypher/graph/attrs"
-	"github.com/milosgajdos/go-hypher/graph/style"
+	"github.com/milosgajdos/go-hypher"
 )
 
 const (
@@ -26,22 +24,22 @@ const (
 type Edge struct {
 	uid    string
 	label  string
-	from   graph.Node
-	to     graph.Node
+	from   hypher.Node
+	to     hypher.Node
 	weight float64
 	attrs  map[string]any
-	style  style.Style
+	style  Style
 	mu     sync.RWMutex
 }
 
 // NewEdge creates a new edge and returns it.
-func NewEdge(from, to graph.Node, opts ...Option) (*Edge, error) {
+func NewEdge(from, to hypher.Node, opts ...Option) (*Edge, error) {
 	eopts := Options{
 		UID:    uuid.New().String(),
 		Weight: DefaultEdgeWeight,
 		Label:  DefaultEdgeLabel,
 		Attrs:  make(map[string]any),
-		Style:  style.DefaultEdge(),
+		Style:  DefaultEdgeStyle(),
 	}
 
 	for _, apply := range opts {
@@ -181,7 +179,7 @@ func (e *Edge) Attributes() []encoding.Attribute {
 		{Key: "style", Value: e.style.Type},
 	}
 
-	a := attrs.ToStringMap(e.attrs)
+	a := AttrsToStringMap(e.attrs)
 	attributes := make([]encoding.Attribute, 0, len(a))
 
 	for k, v := range a {

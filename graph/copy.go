@@ -1,4 +1,4 @@
-package memory
+package graph
 
 import (
 	"maps"
@@ -33,8 +33,8 @@ func EdgeDeepCopy(e *Edge) *Edge {
 	}
 }
 
-// GraphDeepCopy return s deep copy of a memory graph.
-func GraphDeepCopy(g *Graph) *Graph {
+// DeepCopy return s deep copy of a memory graph.
+func DeepCopy(g *Graph) *Graph {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 

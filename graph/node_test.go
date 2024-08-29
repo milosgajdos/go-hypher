@@ -1,10 +1,10 @@
-package memory
+package graph
 
 import (
 	"reflect"
 	"testing"
 
-	"github.com/milosgajdos/go-hypher/graph/style"
+	"github.com/milosgajdos/go-hypher"
 )
 
 func MustNode(t *testing.T, opts ...Option) *Node {
@@ -40,16 +40,16 @@ func TestNewNode(t *testing.T) {
 		t.Error("expected nil graph")
 	}
 
-	if s := n.Type(); s != style.DefaultNodeStyleType {
-		t.Errorf("expected type: %s, got: %s", style.DefaultNodeStyleType, s)
+	if s := n.Type(); s != DefaultNodeStyleType {
+		t.Errorf("expected type: %s, got: %s", DefaultNodeStyleType, s)
 	}
 
-	if s := n.Shape(); s != style.DefaultNodeShape {
-		t.Errorf("expected shape: %s, got: %s", style.DefaultNodeShape, s)
+	if s := n.Shape(); s != DefaultNodeShape {
+		t.Errorf("expected shape: %s, got: %s", DefaultNodeShape, s)
 	}
 
-	if c := n.Color(); c != style.DefaultNodeColor {
-		t.Errorf("expected color: %v, got: %v", style.DefaultNodeColor, c)
+	if c := n.Color(); c != DefaultNodeColor {
+		t.Errorf("expected color: %v, got: %v", DefaultNodeColor, c)
 	}
 
 	if d := n.DOTID(); d != n.UID() {
@@ -98,10 +98,10 @@ func TestNewNodeWithOptions(t *testing.T) {
 		"foo": "bar",
 	}
 
-	style := style.Style{
+	style := Style{
 		Type:  "foo",
 		Shape: "bar",
-		Color: style.DefaultNodeColor,
+		Color: DefaultNodeColor,
 	}
 
 	opts := []Option{
@@ -201,7 +201,7 @@ func TestNodeCloneTo(t *testing.T) {
 
 func TestNodeSetInputs(t *testing.T) {
 	n := MustNode(t)
-	inputs := []Value{{"foo": 10}}
+	inputs := []hypher.Value{{"foo": 10}}
 
 	err := n.SetInputs(inputs...)
 	if err != nil {

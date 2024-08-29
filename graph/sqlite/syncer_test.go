@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/milosgajdos/go-hypher"
 	"github.com/milosgajdos/go-hypher/graph"
-	"github.com/milosgajdos/go-hypher/graph/memory"
 )
 
 func MustSyncer(tb testing.TB, db *DB) *Syncer {
@@ -25,43 +25,43 @@ func TestSyncer_Sync(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a test graph
-	g, err := memory.NewGraph()
+	g, err := graph.NewGraph()
 	if err != nil {
 		t.Fatalf("failed to create new graph: %v", err)
 	}
 
-	nodeOpts := []memory.Option{
-		memory.WithID(1),
-		memory.WithUID("node1"),
-		memory.WithLabel("Node 1"),
-		memory.WithAttrs(map[string]interface{}{"key": "value"}),
+	nodeOpts := []graph.Option{
+		graph.WithID(1),
+		graph.WithUID("node1"),
+		graph.WithLabel("Node 1"),
+		graph.WithAttrs(map[string]interface{}{"key": "value"}),
 	}
 
-	node1, err := memory.NewNode(nodeOpts...)
+	node1, err := graph.NewNode(nodeOpts...)
 	if err != nil {
 		t.Fatalf("failed to create new node: %v", err)
 	}
 
-	nodeOpts = []memory.Option{
-		memory.WithID(2),
-		memory.WithUID("node2"),
-		memory.WithLabel("Node 2"),
-		memory.WithAttrs(map[string]interface{}{"key": "value"}),
+	nodeOpts = []graph.Option{
+		graph.WithID(2),
+		graph.WithUID("node2"),
+		graph.WithLabel("Node 2"),
+		graph.WithAttrs(map[string]interface{}{"key": "value"}),
 	}
 
-	node2, err := memory.NewNode(nodeOpts...)
+	node2, err := graph.NewNode(nodeOpts...)
 	if err != nil {
 		t.Fatalf("failed to create new node: %v", err)
 	}
 
-	edgeOpts := []memory.Option{
-		memory.WithUID("edge1"),
-		memory.WithLabel("Edge 1"),
-		memory.WithWeight(1.0),
-		memory.WithAttrs(map[string]interface{}{"key2": "value2"}),
+	edgeOpts := []graph.Option{
+		graph.WithUID("edge1"),
+		graph.WithLabel("Edge 1"),
+		graph.WithWeight(1.0),
+		graph.WithAttrs(map[string]interface{}{"key2": "value2"}),
 	}
 
-	edge, err := memory.NewEdge(node1, node2, edgeOpts...)
+	edge, err := graph.NewEdge(node1, node2, edgeOpts...)
 	if err != nil {
 		t.Fatalf("failed to create new edge: %v", err)
 	}
@@ -163,10 +163,10 @@ func TestSyncer_Sync(t *testing.T) {
 		t.Errorf("expected edge UID %v, got %v", edge.UID(), edgeUID)
 	}
 
-	if fromUID := edge.From().(graph.Node).UID(); fromUID != sourceUID {
+	if fromUID := edge.From().(hypher.Node).UID(); fromUID != sourceUID {
 		t.Errorf("expected source UID %v, got %v", fromUID, sourceUID)
 	}
-	if toUID := edge.To().(graph.Node).UID(); toUID != targetUID {
+	if toUID := edge.To().(hypher.Node).UID(); toUID != targetUID {
 		t.Errorf("expected target UID %v, got %v", toUID, targetUID)
 	}
 	if edgeLabel != edge.Label() {

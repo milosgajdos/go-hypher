@@ -1,4 +1,4 @@
-package attrs
+package graph
 
 import (
 	"image/color"
@@ -41,7 +41,7 @@ func TestAttrsToStringMap(t *testing.T) {
 		"color": colorStr,
 	}
 
-	res := ToStringMap(a)
+	res := AttrsToStringMap(a)
 
 	if !reflect.DeepEqual(res, exp) {
 		t.Fatalf("expected: %v, got: %v", exp, res)
@@ -95,7 +95,7 @@ func TestToString(t *testing.T) {
 		tc := tc
 		t.Run("Attr", func(t *testing.T) {
 			t.Parallel()
-			val := ToString(tc.k, tc.a)
+			val := toString(tc.k, tc.a)
 			if val != tc.exp {
 				t.Errorf("expected val: %s, got: %s", tc.exp, val)
 			}

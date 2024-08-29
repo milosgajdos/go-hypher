@@ -1,4 +1,4 @@
-package memory
+package graph
 
 import (
 	"context"
@@ -11,8 +11,7 @@ import (
 	"github.com/google/uuid"
 	"gonum.org/v1/gonum/graph/encoding"
 
-	"github.com/milosgajdos/go-hypher/graph/attrs"
-	"github.com/milosgajdos/go-hypher/graph/style"
+	"github.com/milosgajdos/go-hypher"
 )
 
 const (
@@ -34,12 +33,12 @@ type Node struct {
 	label string
 	attrs map[string]any
 	graph *Graph
-	style style.Style
+	style Style
 	// node Op
-	op Op
+	op hypher.Op
 	// Node I/O
-	inputs  []Value
-	outputs []Value
+	inputs  []hypher.Value
+	outputs []hypher.Value
 	mu      sync.RWMutex
 }
 
@@ -52,7 +51,7 @@ func NewNode(opts ...Option) (*Node, error) {
 		DotID: uid,
 		Label: DefaultNodeLabel,
 		Attrs: make(map[string]any),
-		Style: style.DefaultNode(),
+		Style: DefaultNodeStyle(),
 		Op:    NoOp{},
 	}
 
@@ -69,8 +68,8 @@ func NewNode(opts ...Option) (*Node, error) {
 		graph:   nopts.Graph,
 		style:   nopts.Style,
 		op:      nopts.Op,
-		inputs:  []Value{},
-		outputs: []Value{},
+		inputs:  []hypher.Value{},
+		outputs: []hypher.Value{},
 	}
 
 	if g := node.graph; g != nil {
@@ -136,7 +135,7 @@ func (n *Node) Graph() *Graph {
 }
 
 // Inputs return node inputs.
-func (n *Node) Inputs() []Value {
+func (n *Node) Inputs() []hypher.Value {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
@@ -144,7 +143,7 @@ func (n *Node) Inputs() []Value {
 }
 
 // SetInputs sets the node inputs.
-func (n *Node) SetInputs(inputs ...Value) error {
+func (n *Node) SetInputs(inputs ...hypher.Value) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
@@ -153,7 +152,7 @@ func (n *Node) SetInputs(inputs ...Value) error {
 }
 
 // Outputs returns node outputs.
-func (n *Node) Outputs() []Value {
+func (n *Node) Outputs() []hypher.Value {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
@@ -161,7 +160,7 @@ func (n *Node) Outputs() []Value {
 }
 
 // Op returns node Op.
-func (n *Node) Op() Op {
+func (n *Node) Op() hypher.Op {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
@@ -210,7 +209,7 @@ func (n *Node) Attributes() []encoding.Attribute {
 		{Key: "style", Value: n.style.Type},
 	}
 
-	a := attrs.ToStringMap(n.attrs)
+	a := AttrsToStringMap(n.attrs)
 	attributes := make([]encoding.Attribute, 0, len(a))
 
 	for k, v := range a {
@@ -267,11 +266,11 @@ func (n *Node) CloneTo(g *Graph) (*Node, error) {
 
 // Exec executes a node Op and returns its result.
 // It appends the output of the Op to its outputs.
-func (n *Node) Exec(ctx context.Context, inputs ...Value) (Value, error) {
+func (n *Node) Exec(ctx context.Context, inputs ...hypher.Value) (hypher.Value, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	opInputs := make([]Value, len(n.inputs)+len(inputs))
+	opInputs := make([]hypher.Value, len(n.inputs)+len(inputs))
 	copy(opInputs, n.inputs)
 	copy(opInputs[len(n.inputs):], inputs)
 

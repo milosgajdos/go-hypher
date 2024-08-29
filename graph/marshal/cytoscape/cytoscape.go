@@ -6,7 +6,7 @@ import (
 
 	"gonum.org/v1/gonum/graph/formats/cytoscapejs"
 
-	"github.com/milosgajdos/go-hypher/graph"
+	"github.com/milosgajdos/go-hypher"
 )
 
 // Marshaler implements graph.Marshaler.
@@ -27,7 +27,7 @@ func NewMarshaler(name, prefix, indent string) (*Marshaler, error) {
 
 // Marshal marshals g into format that can be used by
 // CytoscapJS https://js.cytoscape.org/
-func (m *Marshaler) Marshal(g graph.Graph) ([]byte, error) {
+func (m *Marshaler) Marshal(g hypher.Graph) ([]byte, error) {
 	c := cytoscapejs.Elements{
 		Nodes: make([]cytoscapejs.Node, 0, g.Nodes().Len()),
 		Edges: make([]cytoscapejs.Edge, 0, g.Edges().Len()),
@@ -35,7 +35,7 @@ func (m *Marshaler) Marshal(g graph.Graph) ([]byte, error) {
 
 	nodes := g.Nodes()
 	for nodes.Next() {
-		n := nodes.Node().(graph.Node)
+		n := nodes.Node().(hypher.Node)
 
 		ndata := cytoscapejs.NodeData{
 			ID:         fmt.Sprint(n.ID()),
@@ -50,7 +50,7 @@ func (m *Marshaler) Marshal(g graph.Graph) ([]byte, error) {
 
 	edges := g.Edges()
 	for edges.Next() {
-		e := edges.Edge().(graph.Edge)
+		e := edges.Edge().(hypher.Edge)
 
 		edata := cytoscapejs.EdgeData{
 			ID:         e.UID(),

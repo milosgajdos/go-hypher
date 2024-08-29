@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/milosgajdos/go-hypher/graph"
-	"github.com/milosgajdos/go-hypher/graph/memory"
 )
 
 // Loader loads graph from sqlite DB.
@@ -23,7 +22,7 @@ func NewLoader(db *DB) (*Loader, error) {
 }
 
 // Load loads the graph from sqlite DB and returns it.
-func (l *Loader) Load(ctx context.Context, uid string) (graph.Graph, error) {
+func (l *Loader) Load(ctx context.Context, uid string) (*graph.Graph, error) {
 	tx, err := l.db.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -57,10 +56,10 @@ func (l *Loader) Load(ctx context.Context, uid string) (graph.Graph, error) {
 	}
 
 	// Create the in-memory graph
-	g, err := memory.NewGraph(
-		memory.WithUID(uid),
-		memory.WithLabel(label),
-		memory.WithAttrs(attrs),
+	g, err := graph.NewGraph(
+		graph.WithUID(uid),
+		graph.WithLabel(label),
+		graph.WithAttrs(attrs),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create in-memory graph: %w", err)
@@ -83,7 +82,7 @@ func (l *Loader) Load(ctx context.Context, uid string) (graph.Graph, error) {
 	}
 	defer rows.Close()
 
-	nodeMap := make(map[string]*memory.Node) // Map to store nodes by their UID
+	nodeMap := make(map[string]*graph.Node) // Map to store nodes by their UID
 
 	for rows.Next() {
 		var (
@@ -105,11 +104,11 @@ func (l *Loader) Load(ctx context.Context, uid string) (graph.Graph, error) {
 		}
 
 		// Create node and add it to the graph
-		node, err := memory.NewNode(
-			memory.WithID(id),
-			memory.WithUID(nodeUID),
-			memory.WithLabel(nodeLabel),
-			memory.WithAttrs(nodeAttrs),
+		node, err := graph.NewNode(
+			graph.WithID(id),
+			graph.WithUID(nodeUID),
+			graph.WithLabel(nodeLabel),
+			graph.WithAttrs(nodeAttrs),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create node: %w", err)
@@ -171,11 +170,11 @@ func (l *Loader) Load(ctx context.Context, uid string) (graph.Graph, error) {
 			return nil, errors.New("source or target node does not exist")
 		}
 
-		edge, err := memory.NewEdge(sourceNode, targetNode,
-			memory.WithUID(edgeUID),
-			memory.WithLabel(edgeLabel),
-			memory.WithWeight(weight),
-			memory.WithAttrs(edgeAttrs),
+		edge, err := graph.NewEdge(sourceNode, targetNode,
+			graph.WithUID(edgeUID),
+			graph.WithLabel(edgeLabel),
+			graph.WithWeight(weight),
+			graph.WithAttrs(edgeAttrs),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create edge: %w", err)

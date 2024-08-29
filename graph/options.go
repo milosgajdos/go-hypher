@@ -1,9 +1,9 @@
-package memory
+package graph
 
 import (
 	"maps"
 
-	"github.com/milosgajdos/go-hypher/graph/style"
+	"github.com/milosgajdos/go-hypher"
 )
 
 // Options configure graph.
@@ -23,9 +23,9 @@ type Options struct {
 	// Graph configures node's graph
 	Graph *Graph
 	// Op configures node's Op.
-	Op Op
+	Op hypher.Op
 	// Style configures style.
-	Style style.Style
+	Style Style
 }
 
 // Option is functional graph option.
@@ -81,14 +81,14 @@ func WithGraph(g *Graph) Option {
 }
 
 // WithOp sets Op.
-func WithOp(op Op) Option {
+func WithOp(op hypher.Op) Option {
 	return func(o *Options) {
 		o.Op = op
 	}
 }
 
 // WithStyle sets Style option.
-func WithStyle(s style.Style) Option {
+func WithStyle(s Style) Option {
 	return func(o *Options) {
 		o.Style = s
 	}

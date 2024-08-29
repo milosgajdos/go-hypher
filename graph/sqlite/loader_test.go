@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/milosgajdos/go-hypher"
 	"github.com/milosgajdos/go-hypher/graph"
-	"github.com/milosgajdos/go-hypher/graph/memory"
 )
 
 func MustLoader(tb testing.TB, db *DB) *Loader {
@@ -25,20 +25,20 @@ func TestLoader_Load(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a test graph
-	g, err := memory.NewGraph()
+	g, err := graph.NewGraph()
 	if err != nil {
 		t.Fatalf("failed to create new graph: %v", err)
 	}
 
 	// Create two nodes
-	nodeOpts := []memory.Option{
-		memory.WithID(1),
-		memory.WithUID("node1"),
-		memory.WithLabel("Node 1"),
-		memory.WithAttrs(map[string]any{"key": "value"}),
+	nodeOpts := []graph.Option{
+		graph.WithID(1),
+		graph.WithUID("node1"),
+		graph.WithLabel("Node 1"),
+		graph.WithAttrs(map[string]any{"key": "value"}),
 	}
 
-	node1, err := memory.NewNode(nodeOpts...)
+	node1, err := graph.NewNode(nodeOpts...)
 	if err != nil {
 		t.Fatalf("failed to create new node: %v", err)
 	}
@@ -46,14 +46,14 @@ func TestLoader_Load(t *testing.T) {
 		t.Fatalf("failed to add node: %d: %v", node1.ID(), err)
 	}
 
-	nodeOpts = []memory.Option{
-		memory.WithID(2),
-		memory.WithUID("node2"),
-		memory.WithLabel("Node 2"),
-		memory.WithAttrs(map[string]any{"key": "value"}),
+	nodeOpts = []graph.Option{
+		graph.WithID(2),
+		graph.WithUID("node2"),
+		graph.WithLabel("Node 2"),
+		graph.WithAttrs(map[string]any{"key": "value"}),
 	}
 
-	node2, err := memory.NewNode(nodeOpts...)
+	node2, err := graph.NewNode(nodeOpts...)
 	if err != nil {
 		t.Fatalf("failed to create new node: %v", err)
 	}
@@ -62,14 +62,14 @@ func TestLoader_Load(t *testing.T) {
 	}
 
 	// Create an edge between the two nodes
-	edgeOpts := []memory.Option{
-		memory.WithUID("edge1"),
-		memory.WithLabel("Edge 1"),
-		memory.WithWeight(1.0),
-		memory.WithAttrs(map[string]any{"key2": "value2"}),
+	edgeOpts := []graph.Option{
+		graph.WithUID("edge1"),
+		graph.WithLabel("Edge 1"),
+		graph.WithWeight(1.0),
+		graph.WithAttrs(map[string]any{"key2": "value2"}),
 	}
 
-	edge, err := memory.NewEdge(node1, node2, edgeOpts...)
+	edge, err := graph.NewEdge(node1, node2, edgeOpts...)
 	if err != nil {
 		t.Fatalf("failed to create new edge: %v", err)
 	}
@@ -99,9 +99,9 @@ func TestLoader_Load(t *testing.T) {
 
 	// Verify the nodes
 	nodes := loadedGraph.Nodes()
-	nodeMap := make(map[string]graph.Node)
+	nodeMap := make(map[string]hypher.Node)
 	for nodes.Next() {
-		n := nodes.Node().(graph.Node)
+		n := nodes.Node().(hypher.Node)
 		nodeMap[n.UID()] = n
 	}
 
@@ -137,9 +137,9 @@ func TestLoader_Load(t *testing.T) {
 
 	// Verify the edges
 	edges := loadedGraph.Edges()
-	edgeMap := make(map[string]graph.Edge)
+	edgeMap := make(map[string]hypher.Edge)
 	for edges.Next() {
-		e := edges.Edge().(graph.Edge)
+		e := edges.Edge().(hypher.Edge)
 		edgeMap[e.UID()] = e
 	}
 
@@ -159,11 +159,11 @@ func TestLoader_Load(t *testing.T) {
 		if len(e.Attrs()) != len(edge.Attrs()) {
 			t.Errorf("expected edge attributes %v, got %v", edge.Attrs(), e.Attrs())
 		}
-		fromUID, edgeFromUID := e.From().(graph.Node).UID(), edge.From().(graph.Node).UID()
+		fromUID, edgeFromUID := e.From().(hypher.Node).UID(), edge.From().(hypher.Node).UID()
 		if fromUID != edgeFromUID {
 			t.Errorf("expected edge from node UID %v, got %v", edgeFromUID, fromUID)
 		}
-		toUID, edgeToUID := e.To().(graph.Node).UID(), edge.To().(graph.Node).UID()
+		toUID, edgeToUID := e.To().(hypher.Node).UID(), edge.To().(hypher.Node).UID()
 		if toUID != edgeToUID {
 			t.Errorf("expected edge to node UID %v, got %v", edgeToUID, toUID)
 		}
