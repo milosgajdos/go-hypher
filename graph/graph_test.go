@@ -325,88 +325,99 @@ func (t testOp) Do(_ context.Context, inputs ...hypher.Value) (hypher.Value, err
 	return hypher.Value{testOpKey: inputs}, nil
 }
 
-func TestGraphRun(t *testing.T) {
-	g := MustGraph(t)
+// Check input propagation
+func checkNodeOutput(t *testing.T, n *Node, expectedInputCount int) {
+	outputs := n.Outputs()
+	if len(outputs) != 1 {
+		t.Errorf("Node %d: expected 1 output, got %d", n.ID(), len(outputs))
+		return
+	}
+	output := outputs[0]
+	inputs, ok := output[testOpKey].([]hypher.Value)
+	if !ok {
+		t.Errorf("Node %d: output is not of type []Input", n.ID())
+		return
+	}
+	if len(inputs) != expectedInputCount {
+		t.Errorf("Node %d: expected %d inputs, got %d", n.ID(), expectedInputCount, len(inputs))
+	}
+}
 
-	n0 := MustNode(t, WithGraph(g), WithOp(testOp{}))
-	n1 := MustNode(t, WithGraph(g), WithOp(testOp{}))
-	n2 := MustNode(t, WithGraph(g), WithOp(testOp{}))
-	n3 := MustNode(t, WithGraph(g), WithOp(testOp{}))
-	n4 := MustNode(t, WithGraph(g), WithOp(testOp{}))
-	n5 := MustNode(t, WithGraph(g), WithOp(testOp{}))
-	n6 := MustNode(t, WithGraph(g), WithOp(testOp{}))
-
-	MustEdge(t, n0, n1, WithGraph(g))
-	MustEdge(t, n0, n3, WithGraph(g))
-	MustEdge(t, n1, n5, WithGraph(g))
-	MustEdge(t, n1, n6, WithGraph(g))
-	MustEdge(t, n2, n3, WithGraph(g))
-	MustEdge(t, n2, n4, WithGraph(g))
-	MustEdge(t, n2, n5, WithGraph(g))
-	MustEdge(t, n3, n5, WithGraph(g))
-
-	g.SetInputs([]*Node{n0, n2})
-	g.SetOutputs([]*Node{n5})
-
-	// node inputs
-	_ = n1.SetInputs(hypher.Value{"ID": n1.ID()})
-	_ = n3.SetInputs(hypher.Value{"ID": n3.ID()})
-	_ = n4.SetInputs(hypher.Value{"ID": n4.ID()})
-	_ = n5.SetInputs(hypher.Value{"ID": n5.ID()})
-	_ = n6.SetInputs(hypher.Value{"ID": n6.ID()})
-
-	graphInputs := map[string]hypher.Value{
-		n0.UID(): {"ID": n0.ID()},
-		n2.UID(): {"ID": n2.ID()},
+func TestGraph(t *testing.T) {
+	testCases := []struct {
+		name     string
+		runAll   bool
+		expected map[int64]int // map of node ID to expected input count
+	}{
+		{
+			name:   "Run",
+			runAll: false,
+			expected: map[int64]int{
+				0: 1, 1: 2, 2: 1, 3: 3, 5: 4,
+			},
+		},
+		{
+			name:   "RunAll",
+			runAll: true,
+			expected: map[int64]int{
+				0: 1, 1: 2, 2: 1, 3: 3, 5: 4,
+			},
+		},
 	}
 
-	ctx := context.Background()
-	if err := g.Run(ctx, graphInputs); err != nil {
-		t.Fatalf("run failed: %v", err)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := MustGraph(t)
 
-	expectedExecuted := map[int64]bool{
-		n0.ID(): true,
-		n1.ID(): true,
-		n2.ID(): true,
-		n3.ID(): true,
-		n5.ID(): true,
-	}
-
-	// make sure only the right nodes have been executed
-	for _, n := range []*Node{n0, n1, n2, n3, n4, n5, n6} {
-		if !expectedExecuted[n.ID()] {
-			if len(n.Outputs()) > 0 {
-				t.Errorf("Node %d should not have been executed but has outputs", n.ID())
+			nodes := make([]*Node, 7)
+			for i := range nodes {
+				nodes[i] = MustNode(t, WithGraph(g), WithOp(testOp{}))
 			}
-			continue
-		}
-		if len(n.Outputs()) == 0 {
-			t.Errorf("Node %d should have been executed but has no outputs", n.ID())
-		}
-	}
 
-	// Check input propagation
-	checkNodeOutput := func(n *Node, expectedInputCount int) {
-		outputs := n.Outputs()
-		if len(outputs) != 1 {
-			t.Errorf("Node %d: expected 1 output, got %d", n.ID(), len(outputs))
-			return
-		}
-		output := outputs[0]
-		inputs, ok := output[testOpKey].([]hypher.Value)
-		if !ok {
-			t.Errorf("Node %d: output is not of type []Input", n.ID())
-			return
-		}
-		if len(inputs) != expectedInputCount {
-			t.Errorf("Node %d: expected %d inputs, got %d", n.ID(), expectedInputCount, len(inputs))
-		}
-	}
+			edges := [][2]int{
+				{0, 1}, {0, 3}, {1, 5}, {1, 6},
+				{2, 3}, {2, 4}, {2, 5}, {3, 5},
+			}
 
-	checkNodeOutput(n0, 1) // Graph input
-	checkNodeOutput(n2, 1) // Graph input
-	checkNodeOutput(n1, 2) // Preset input + input from n0
-	checkNodeOutput(n3, 3) // Preset input + inputs from n0 and n2
-	checkNodeOutput(n5, 4) // Preset input + inputs from n1, n2, and n3
+			for _, edge := range edges {
+				MustEdge(t, nodes[edge[0]], nodes[edge[1]], WithGraph(g))
+			}
+
+			g.SetInputs([]*Node{nodes[0], nodes[2]})
+			g.SetOutputs([]*Node{nodes[5]})
+
+			// Set node inputs
+			for i, n := range nodes[1:] { // Skip nodes[0]
+				_ = n.SetInputs(hypher.Value{"ID": n.ID()})
+				if i == 1 { // This is nodes[2], which is a graph input
+					continue
+				}
+			}
+
+			graphInputs := map[string]hypher.Value{
+				nodes[0].UID(): {"ID": nodes[0].ID()},
+				nodes[2].UID(): {"ID": nodes[2].ID()},
+			}
+
+			ctx := context.Background()
+			var runOpts []Option
+			if tc.runAll {
+				runOpts = append(runOpts, WithRunAll())
+			}
+			if err := g.Run(ctx, graphInputs, runOpts...); err != nil {
+				t.Fatalf("run failed: %v", err)
+			}
+
+			for id, expectedInputs := range tc.expected {
+				checkNodeOutput(t, nodes[id], expectedInputs)
+			}
+
+			// Check that unexpected nodes were not executed
+			for id, n := range nodes {
+				if _, expected := tc.expected[int64(id)]; !expected && len(n.Outputs()) > 0 {
+					t.Errorf("Node %d should not have been executed but has outputs", id)
+				}
+			}
+		})
+	}
 }
