@@ -360,7 +360,8 @@ func TestGraphRun(t *testing.T) {
 		n2.UID(): {"ID": n2.ID()},
 	}
 
-	if err := g.Run(graphInputs); err != nil {
+	ctx := context.Background()
+	if err := g.Run(ctx, graphInputs); err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
 
