@@ -261,17 +261,20 @@ func (g *Graph) SetEdge(e hypher.Edge) error {
 
 	fromNode, ok := e.From().(*Node)
 	if !ok {
-		return fmt.Errorf("invalid from node: %T", e.From())
+		return fmt.Errorf("invalid From node: %T", e.From())
 	}
 
 	toNode, ok := e.To().(*Node)
 	if !ok {
-		return fmt.Errorf("invalid from node: %T", e.To())
+		return fmt.Errorf("invalid To node: %T", e.To())
 	}
 
 	if edge := g.Edge(e.From().ID(), e.To().ID()); edge != nil {
 		return nil
 	}
+
+	fromNodeID, toNodeID := fromNode.id, toNode.id
+	fromNodeGraph, toNodeGraph := fromNode.graph, toNode.graph
 
 	var fromAdded, toAdded bool
 
@@ -284,7 +287,6 @@ func (g *Graph) SetEdge(e hypher.Edge) error {
 		g.nodes[fromNode.UID()] = fromNode.ID()
 		fromAdded = true
 	}
-
 	if toNode.ID() == NoneID || g.Node(toNode.ID()) == nil {
 		toNode.id = g.WeightedDirectedGraph.NewNode().ID()
 		toNode.graph = g
@@ -299,16 +301,17 @@ func (g *Graph) SetEdge(e hypher.Edge) error {
 		// remove the edge and the nodes that have just been created
 		g.RemoveEdge(fromNode.ID(), toNode.ID())
 		// remove nodes if they had been created
+		// and reset their IDs and graphs
 		if fromAdded {
 			g.RemoveNode(fromNode.ID())
-			fromNode.id = NoneID
-			fromNode.graph = nil
+			fromNode.id = fromNodeID
+			fromNode.graph = fromNodeGraph
 			delete(g.nodes, fromNode.uid)
 		}
 		if toAdded {
 			g.RemoveNode(toNode.ID())
-			toNode.id = NoneID
-			toNode.graph = nil
+			toNode.id = toNodeID
+			toNode.graph = toNodeGraph
 			delete(g.nodes, toNode.uid)
 		}
 		return fmt.Errorf("cycle detected when adding edge: %s", e)
@@ -361,7 +364,7 @@ func (g *Graph) buildSubGraph(sg *Graph, n *Node, outputNodes map[int64]struct{}
 
 // SubGraph returns a sub-graph of g which contains all the nodes
 // which are either outputNodes or are on the path to the outputNodes
-// when starting the traversal in inputNodes, including the inputNodes.
+// when starting the graph traversal in inputNodes, including the inputNodes.
 func (g *Graph) SubGraph(inputNodes, outputNodes Nodes) (*Graph, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -394,47 +397,57 @@ func (g *Graph) SubGraph(inputNodes, outputNodes Nodes) (*Graph, error) {
 // If there isn't at least one node with zero
 // incoming edge the graph must ehter have a cycle,
 // or have no nodes, so an empty slice is returned.
-func (g *Graph) TopoSort() (Nodes, error) {
+func (g *Graph) TopoSort() ([]gonum.Node, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	inDeg := make(map[int64]int)
-	var zeroDegQ Nodes
-	var sorted Nodes
-
-	// Calculate in-degree for each node
-	nodes := g.Nodes()
-	for nodes.Next() {
-		node := nodes.Node()
-		id := node.ID()
-		inDeg[id] = g.To(id).Len()
-		if inDeg[id] == 0 {
-			zeroDegQ = append(zeroDegQ, node.(*Node))
-		}
-	}
-
-	// sort the nodes by traversing the graph from
-	// the roots (i.e. zero in-degree nodes)
-	for len(zeroDegQ) > 0 {
-		node := zeroDegQ[0]
-		zeroDegQ = zeroDegQ[1:]
-		sorted = append(sorted, node)
-
-		to := g.From(node.ID())
-		for to.Next() {
-			succ := to.Node()
-			succID := succ.ID()
-			inDeg[succID]--
-			if inDeg[succID] == 0 {
-				zeroDegQ = append(zeroDegQ, succ.(*Node))
-			}
-		}
+	sorted, err := topo.Sort(g)
+	if err != nil {
+		return nil, err
 	}
 
 	return sorted, nil
 }
 
-func (g *Graph) execNode(ctx context.Context, node *Node, nodeChans map[int64]chan struct{}) error {
+// TopoSortWithLevels does the same topological sort
+// as TopoSort, but groups the sorted nodes to graph levels.
+func (g *Graph) TopoSortWithLevels() ([][]gonum.Node, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	sorted, err := topo.Sort(g)
+	if err != nil {
+		return nil, err
+	}
+
+	levels := make(map[int64]int)
+	maxLevel := 0
+
+	for _, node := range sorted {
+		level := 0
+		predecessors := g.To(node.ID())
+		for predecessors.Next() {
+			pred := predecessors.Node()
+			if levels[pred.ID()] >= level {
+				level = levels[pred.ID()] + 1
+			}
+		}
+		levels[node.ID()] = level
+		if level > maxLevel {
+			maxLevel = level
+		}
+	}
+
+	components := make([][]gonum.Node, maxLevel+1)
+	for _, node := range sorted {
+		level := levels[node.ID()]
+		components[level] = append(components[level], node)
+	}
+
+	return components, nil
+}
+
+func (g *Graph) execNodeWait(ctx context.Context, node *Node, nodeChans map[int64]chan struct{}) error {
 	// TODO: handle the case where we might not want to
 	// aggregate all the predecessor outputs into Exec input;
 	// We might want to do an exec for each predecessor output
@@ -462,18 +475,7 @@ func (g *Graph) execNode(ctx context.Context, node *Node, nodeChans map[int64]ch
 	return nil
 }
 
-// Run runs the graph with the given inputs.
-// The inputs are passed in to the input nodes.
-func (g *Graph) Run(inputs map[string]hypher.Value) error {
-	// set inputs to all the input nodes.
-	for _, node := range g.inputs {
-		if nodeInput, ok := inputs[node.UID()]; ok {
-			if err := node.SetInputs(nodeInput); err != nil {
-				return err
-			}
-		}
-	}
-
+func (g *Graph) runAll(ctx context.Context) error {
 	// get the execution (sub)graph
 	sg, err := g.SubGraph(g.inputs, g.outputs)
 	if err != nil {
@@ -486,20 +488,20 @@ func (g *Graph) Run(inputs map[string]hypher.Value) error {
 		return err
 	}
 
+	eg, egCtx := errgroup.WithContext(ctx)
+
 	// Create a map to store the channels for each node
 	nodeChans := make(map[int64]chan struct{})
 	for _, node := range nodes {
 		nodeChans[node.ID()] = make(chan struct{})
 	}
 
-	eg, ctx := errgroup.WithContext(context.Background())
-
 	// Start a goroutine for each node
 	for _, node := range nodes {
 		// NOTE: we could also just pass the node UID
 		node := node
 		eg.Go(func() error {
-			return g.execNode(ctx, node, nodeChans)
+			return g.execNodeWait(egCtx, node.(*Node), nodeChans)
 		})
 	}
 
@@ -509,6 +511,82 @@ func (g *Graph) Run(inputs map[string]hypher.Value) error {
 	}
 
 	return nil
+}
+
+func (g *Graph) execNode(ctx context.Context, node *Node) error {
+	var nodeInputs []hypher.Value
+	to := g.To(node.ID())
+
+	for to.Next() {
+		pred := to.Node()
+		predOutputs := pred.(*Node).Outputs()
+		nodeInputs = append(nodeInputs, predOutputs...)
+	}
+
+	// exec the node
+	if _, err := node.Exec(ctx, nodeInputs...); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *Graph) run(ctx context.Context) error {
+	// get the execution (sub)graph
+	sg, err := g.SubGraph(g.inputs, g.outputs)
+	if err != nil {
+		return err
+	}
+
+	nodeLevels, err := sg.TopoSortWithLevels()
+	if err != nil {
+		return err
+	}
+
+	for _, nodes := range nodeLevels {
+		// run all nodes on the same level in parallel
+		eg, egCtx := errgroup.WithContext(ctx)
+		for _, node := range nodes {
+			node := node
+			eg.Go(func() error {
+				return g.execNode(egCtx, node.(*Node))
+			})
+		}
+		if err := eg.Wait(); err != nil {
+			return fmt.Errorf("graph run failed: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// Run runs the graph with the given inputs.
+// The inputs are passed in to the input nodes.
+// Run executes all the graph nodes operations.
+// Run is a blocking call. It returns when
+// when the graph execution finished or if any
+// of the executed nodes Op failed with error.
+func (g *Graph) Run(ctx context.Context, inputs map[string]hypher.Value, opts ...Option) error {
+	// NOTE: we only read Parallel option.
+	gopts := Options{}
+	for _, apply := range opts {
+		apply(&gopts)
+	}
+
+	// set inputs to all the input nodes.
+	for _, node := range g.inputs {
+		if nodeInput, ok := inputs[node.UID()]; ok {
+			if err := node.SetInputs(nodeInput); err != nil {
+				return err
+			}
+		}
+	}
+
+	if gopts.RunAll {
+		return g.runAll(ctx)
+	}
+
+	return g.run(ctx)
 }
 
 // String implements fmt.Stringer.

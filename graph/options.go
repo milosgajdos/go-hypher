@@ -26,6 +26,8 @@ type Options struct {
 	Op hypher.Op
 	// Style configures style.
 	Style Style
+	// RunAll configures run.
+	RunAll bool
 }
 
 // Option is functional graph option.
@@ -91,5 +93,12 @@ func WithOp(op hypher.Op) Option {
 func WithStyle(s Style) Option {
 	return func(o *Options) {
 		o.Style = s
+	}
+}
+
+// WithRunAll sets Parallel option.
+func WithRunAll() Option {
+	return func(o *Options) {
+		o.RunAll = true
 	}
 }
