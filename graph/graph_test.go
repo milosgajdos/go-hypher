@@ -344,24 +344,33 @@ func checkNodeOutput(t *testing.T, n *Node, expectedInputCount int) {
 }
 
 func TestGraph(t *testing.T) {
+	// graph edges
+	edges := [][2]int{
+		{0, 1}, {0, 3}, {1, 5}, {1, 6},
+		{2, 3}, {2, 4}, {2, 5}, {3, 5},
+	}
+
+	// a map of nodes expected to be executed
+	// during the graph run;
+	// ID: NR_OF_HOPS (predecessors)
+	expected := map[int64]int{
+		0: 1, 1: 2, 2: 1, 3: 3, 5: 4,
+	}
+
 	testCases := []struct {
 		name     string
 		runAll   bool
 		expected map[int64]int // map of node ID to expected input count
 	}{
 		{
-			name:   "Run",
-			runAll: false,
-			expected: map[int64]int{
-				0: 1, 1: 2, 2: 1, 3: 3, 5: 4,
-			},
+			name:     "Run",
+			runAll:   false,
+			expected: expected,
 		},
 		{
-			name:   "RunAll",
-			runAll: true,
-			expected: map[int64]int{
-				0: 1, 1: 2, 2: 1, 3: 3, 5: 4,
-			},
+			name:     "RunAll",
+			runAll:   true,
+			expected: expected,
 		},
 	}
 
@@ -372,11 +381,6 @@ func TestGraph(t *testing.T) {
 			nodes := make([]*Node, 7)
 			for i := range nodes {
 				nodes[i] = MustNode(t, WithGraph(g), WithOp(testOp{}))
-			}
-
-			edges := [][2]int{
-				{0, 1}, {0, 3}, {1, 5}, {1, 6},
-				{2, 3}, {2, 4}, {2, 5}, {3, 5},
 			}
 
 			for _, edge := range edges {
@@ -399,12 +403,11 @@ func TestGraph(t *testing.T) {
 				nodes[2].UID(): {"ID": nodes[2].ID()},
 			}
 
-			ctx := context.Background()
 			var runOpts []Option
 			if tc.runAll {
 				runOpts = append(runOpts, WithRunAll())
 			}
-			if err := g.Run(ctx, graphInputs, runOpts...); err != nil {
+			if err := g.Run(context.Background(), graphInputs, runOpts...); err != nil {
 				t.Fatalf("run failed: %v", err)
 			}
 
