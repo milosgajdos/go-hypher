@@ -30,11 +30,11 @@ func TestSyncer_Sync(t *testing.T) {
 		t.Fatalf("failed to create new graph: %v", err)
 	}
 
-	nodeOpts := []graph.Option{
-		graph.WithID(1),
-		graph.WithUID("node1"),
-		graph.WithLabel("Node 1"),
-		graph.WithAttrs(map[string]interface{}{"key": "value"}),
+	nodeOpts := []hypher.Option{
+		hypher.WithID(1),
+		hypher.WithUID("node1"),
+		hypher.WithLabel("Node 1"),
+		hypher.WithAttrs(map[string]interface{}{"key": "value"}),
 	}
 
 	node1, err := graph.NewNode(nodeOpts...)
@@ -42,11 +42,11 @@ func TestSyncer_Sync(t *testing.T) {
 		t.Fatalf("failed to create new node: %v", err)
 	}
 
-	nodeOpts = []graph.Option{
-		graph.WithID(2),
-		graph.WithUID("node2"),
-		graph.WithLabel("Node 2"),
-		graph.WithAttrs(map[string]interface{}{"key": "value"}),
+	nodeOpts = []hypher.Option{
+		hypher.WithID(2),
+		hypher.WithUID("node2"),
+		hypher.WithLabel("Node 2"),
+		hypher.WithAttrs(map[string]interface{}{"key": "value"}),
 	}
 
 	node2, err := graph.NewNode(nodeOpts...)
@@ -54,11 +54,11 @@ func TestSyncer_Sync(t *testing.T) {
 		t.Fatalf("failed to create new node: %v", err)
 	}
 
-	edgeOpts := []graph.Option{
-		graph.WithUID("edge1"),
-		graph.WithLabel("Edge 1"),
-		graph.WithWeight(1.0),
-		graph.WithAttrs(map[string]interface{}{"key2": "value2"}),
+	edgeOpts := []hypher.Option{
+		hypher.WithUID("edge1"),
+		hypher.WithLabel("Edge 1"),
+		hypher.WithWeight(1.0),
+		hypher.WithAttrs(map[string]interface{}{"key2": "value2"}),
 	}
 
 	edge, err := graph.NewEdge(node1, node2, edgeOpts...)

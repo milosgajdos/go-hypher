@@ -1,9 +1,15 @@
-package graph
+package hypher
 
-import (
-	"maps"
+import "maps"
 
-	"github.com/milosgajdos/go-hypher"
+// RunMode is Graph run mode.
+type RunMode int
+
+const (
+	// RunLevelMode runs node on the same graph level concurrently
+	RunLevelMode RunMode = iota
+	// RunAllMode runs all Graph nodes concurrently.
+	RunAllMode
 )
 
 // Options configure graph.
@@ -15,19 +21,17 @@ type Options struct {
 	// Label configures Label.
 	Label string
 	// Attrs configures Attrs.
-	Attrs map[string]interface{}
+	Attrs map[string]any
 	// DotID configures DOT ID
 	DotID string
-	// Weight configures weight.
+	// Weight configures Edge weight.
 	Weight float64
-	// Graph configures node's graph
-	Graph *Graph
-	// Op configures node's Op.
-	Op hypher.Op
-	// Style configures style.
-	Style Style
-	// RunAll configures run.
-	RunAll bool
+	// Graph configures Node's graph
+	Graph Graph
+	// RunMode configures Graph run mode.
+	RunMode RunMode
+	// Op configures Node's Op.
+	Op Op
 }
 
 // Option is functional graph option.
@@ -55,7 +59,7 @@ func WithLabel(label string) Option {
 }
 
 // WithAttrs sets Attrs option,
-func WithAttrs(attrs map[string]interface{}) Option {
+func WithAttrs(attrs map[string]any) Option {
 	return func(o *Options) {
 		o.Attrs = maps.Clone(attrs)
 	}
@@ -75,30 +79,23 @@ func WithWeight(weight float64) Option {
 	}
 }
 
-// WithGraph sets Graph options.
-func WithGraph(g *Graph) Option {
+// WithGraph sets hypher Graph.
+func WithGraph(g Graph) Option {
 	return func(o *Options) {
 		o.Graph = g
 	}
 }
 
+// WithRunAll sets Parallel option.
+func WithRunMode(mode RunMode) Option {
+	return func(o *Options) {
+		o.RunMode = mode
+	}
+}
+
 // WithOp sets Op.
-func WithOp(op hypher.Op) Option {
+func WithOp(op Op) Option {
 	return func(o *Options) {
 		o.Op = op
-	}
-}
-
-// WithStyle sets Style option.
-func WithStyle(s Style) Option {
-	return func(o *Options) {
-		o.Style = s
-	}
-}
-
-// WithRunAll sets Parallel option.
-func WithRunAll() Option {
-	return func(o *Options) {
-		o.RunAll = true
 	}
 }

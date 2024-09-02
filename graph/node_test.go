@@ -7,7 +7,7 @@ import (
 	"github.com/milosgajdos/go-hypher"
 )
 
-func MustNode(t *testing.T, opts ...Option) *Node {
+func MustNode(t *testing.T, opts ...hypher.Option) *Node {
 	n, err := NewNode(opts...)
 	if err != nil {
 		t.Fatalf("failed to create new node: %v", err)
@@ -38,18 +38,6 @@ func TestNewNode(t *testing.T) {
 
 	if n.Graph() != nil {
 		t.Error("expected nil graph")
-	}
-
-	if s := n.Type(); s != DefaultNodeStyleType {
-		t.Errorf("expected type: %s, got: %s", DefaultNodeStyleType, s)
-	}
-
-	if s := n.Shape(); s != DefaultNodeShape {
-		t.Errorf("expected shape: %s, got: %s", DefaultNodeShape, s)
-	}
-
-	if c := n.Color(); c != DefaultNodeColor {
-		t.Errorf("expected color: %v, got: %v", DefaultNodeColor, c)
 	}
 
 	if d := n.DOTID(); d != n.UID() {
@@ -98,36 +86,17 @@ func TestNewNodeWithOptions(t *testing.T) {
 		"foo": "bar",
 	}
 
-	style := Style{
-		Type:  "foo",
-		Shape: "bar",
-		Color: DefaultNodeColor,
-	}
-
-	opts := []Option{
-		WithID(testID),
-		WithLabel(testLabel),
-		WithAttrs(attrs),
-		WithUID(testUID),
-		WithDotID(testDotID),
-		WithStyle(style),
+	opts := []hypher.Option{
+		hypher.WithID(testID),
+		hypher.WithLabel(testLabel),
+		hypher.WithAttrs(attrs),
+		hypher.WithUID(testUID),
+		hypher.WithDotID(testDotID),
 	}
 
 	n, err := NewNode(opts...)
 	if err != nil {
 		t.Fatalf("failed to create new node: %v", err)
-	}
-
-	if s := n.Type(); s != style.Type {
-		t.Errorf("expected style: %s, got: %s", style.Type, s)
-	}
-
-	if s := n.Shape(); s != style.Shape {
-		t.Errorf("expected shape: %s, got: %s", style.Shape, s)
-	}
-
-	if c := n.Color(); c != style.Color {
-		t.Errorf("expected color: %v, got: %v", style.Color, c)
 	}
 
 	if id := n.ID(); id != testID {
@@ -145,7 +114,7 @@ func TestNewNodeWithOptions(t *testing.T) {
 
 func TestNodeWithGraph(t *testing.T) {
 	g := MustGraph(t)
-	n := MustNode(t, WithGraph(g))
+	n := MustNode(t, hypher.WithGraph(g))
 
 	if n.ID() == NoneID {
 		t.Error("expected non-NoneID")
@@ -157,7 +126,9 @@ func TestNodeWithGraph(t *testing.T) {
 }
 
 func TestNodeClone(t *testing.T) {
-	n1 := MustNode(t, WithLabel("TestNode"), WithAttrs(map[string]any{"key": "value"}))
+	n1 := MustNode(t,
+		hypher.WithLabel("TestNode"),
+		hypher.WithAttrs(map[string]any{"key": "value"}))
 	n2, err := n1.Clone()
 	if err != nil {
 		t.Fatalf("failed to clone node: %v", err)
@@ -182,7 +153,7 @@ func TestNodeClone(t *testing.T) {
 
 func TestNodeCloneTo(t *testing.T) {
 	g1 := MustGraph(t)
-	n1 := MustNode(t, WithGraph(g1))
+	n1 := MustNode(t, hypher.WithGraph(g1))
 
 	g2 := MustGraph(t)
 	n2, err := n1.CloneTo(g2)

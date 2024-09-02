@@ -3,10 +3,12 @@ package graph
 import (
 	"reflect"
 	"testing"
+
+	"github.com/milosgajdos/go-hypher"
 )
 
 // MustEdge creates a new Edge and returns it, panicking if there's an error.
-func MustEdge(t *testing.T, from, to *Node, opts ...Option) *Edge {
+func MustEdge(t *testing.T, from, to *Node, opts ...hypher.Option) *Edge {
 	e, err := NewEdge(from, to, opts...)
 	if err != nil {
 		t.Fatalf("failed to create new edge: %v", err)
@@ -16,8 +18,8 @@ func MustEdge(t *testing.T, from, to *Node, opts ...Option) *Edge {
 
 func TestNewEdge(t *testing.T) {
 	g := MustGraph(t)
-	n1 := MustNode(t, WithGraph(g))
-	n2 := MustNode(t, WithGraph(g))
+	n1 := MustNode(t, hypher.WithGraph(g))
+	n2 := MustNode(t, hypher.WithGraph(g))
 
 	e := MustEdge(t, n1, n2)
 
@@ -58,18 +60,6 @@ func TestNewEdge(t *testing.T) {
 	if l := e.Label(); l != newLabel {
 		t.Errorf("expected label: %s, got: %s", newLabel, l)
 	}
-
-	if s := e.Style(); s != DefaultEdgeStyleType {
-		t.Errorf("expected style: %s, got: %s", DefaultEdgeStyleType, s)
-	}
-
-	if s := e.Shape(); s != DefaultEdgeShape {
-		t.Errorf("expected shape: %s, got: %s", DefaultEdgeShape, s)
-	}
-
-	if c := e.Color(); c != DefaultEdgeColor {
-		t.Errorf("expected color: %v, got: %v", DefaultEdgeColor, c)
-	}
 }
 
 func TestNewEdgeWithOptions(t *testing.T) {
@@ -81,10 +71,13 @@ func TestNewEdgeWithOptions(t *testing.T) {
 	)
 	attrs := map[string]any{"foo": "bar"}
 
-	from := MustNode(t, WithGraph(g), WithAttrs(attrs))
-	to := MustNode(t, WithGraph(g), WithAttrs(attrs))
+	from := MustNode(t, hypher.WithGraph(g), hypher.WithAttrs(attrs))
+	to := MustNode(t, hypher.WithGraph(g), hypher.WithAttrs(attrs))
 
-	e, err := NewEdge(from, to, WithLabel(testLabel), WithAttrs(attrs), WithWeight(testWeight))
+	e, err := NewEdge(from, to,
+		hypher.WithLabel(testLabel),
+		hypher.WithAttrs(attrs),
+		hypher.WithWeight(testWeight))
 	if err != nil {
 		t.Fatalf("failed to create new edge: %v", err)
 	}
@@ -111,8 +104,8 @@ func TestNewEdgeWithOptions(t *testing.T) {
 
 func TestEdgeReversed(t *testing.T) {
 	g := MustGraph(t)
-	n1 := MustNode(t, WithGraph(g))
-	n2 := MustNode(t, WithGraph(g))
+	n1 := MustNode(t, hypher.WithGraph(g))
+	n2 := MustNode(t, hypher.WithGraph(g))
 
 	e1 := MustEdge(t, n1, n2)
 	e2 := e1.ReversedEdge().(*Edge)

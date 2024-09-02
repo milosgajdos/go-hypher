@@ -1,4 +1,4 @@
-package graph
+package dot
 
 import (
 	"image/color"
@@ -32,6 +32,8 @@ type Style struct {
 	Shape string
 	// Color is style color.
 	Color color.RGBA
+	// Attrs are style attributes
+	Attrs map[string]any
 }
 
 // DefaultNodeStyle returns default node style
@@ -40,6 +42,7 @@ func DefaultNodeStyle() Style {
 		Type:  DefaultNodeStyleType,
 		Shape: DefaultNodeShape,
 		Color: DefaultNodeColor,
+		Attrs: make(map[string]any),
 	}
 }
 
@@ -49,5 +52,15 @@ func DefaultEdgeStyle() Style {
 		Type:  DefaultEdgeStyleType,
 		Shape: DefaultEdgeShape,
 		Color: DefaultEdgeColor,
+		Attrs: make(map[string]any),
+	}
+}
+
+// DefaultGraphStyle returns default graph style.
+func DefaultGraphStyle() Style {
+	return Style{
+		Attrs: map[string]any{
+			"labelloc": "t",
+		},
 	}
 }

@@ -3,7 +3,6 @@ package graph
 import (
 	"context"
 	"fmt"
-	"image/color"
 	"maps"
 	"strings"
 	"sync"
@@ -32,8 +31,7 @@ type Node struct {
 	dotid string
 	label string
 	attrs map[string]any
-	graph *Graph
-	style Style
+	graph hypher.Graph
 	// node Op
 	op hypher.Op
 	// Node I/O
@@ -43,15 +41,14 @@ type Node struct {
 }
 
 // NewNode creates a new Node and returns it.
-func NewNode(opts ...Option) (*Node, error) {
+func NewNode(opts ...hypher.Option) (*Node, error) {
 	uid := uuid.New().String()
-	nopts := Options{
+	nopts := hypher.Options{
 		ID:    NoneID,
 		UID:   uid,
 		DotID: uid,
 		Label: DefaultNodeLabel,
 		Attrs: make(map[string]any),
-		Style: DefaultNodeStyle(),
 		Op:    NoOp{},
 	}
 
@@ -66,14 +63,13 @@ func NewNode(opts ...Option) (*Node, error) {
 		label:   nopts.Label,
 		attrs:   nopts.Attrs,
 		graph:   nopts.Graph,
-		style:   nopts.Style,
 		op:      nopts.Op,
 		inputs:  []hypher.Value{},
 		outputs: []hypher.Value{},
 	}
 
 	if g := node.graph; g != nil {
-		if err := g.AddNode(node); err != nil {
+		if err := g.(*Graph).AddNode(node); err != nil {
 			return nil, err
 		}
 	}
@@ -127,7 +123,7 @@ func (n *Node) Attrs() map[string]any {
 }
 
 // Graph returns the node graph.
-func (n *Node) Graph() *Graph {
+func (n *Node) Graph() hypher.Graph {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
@@ -167,21 +163,6 @@ func (n *Node) Op() hypher.Op {
 	return n.op
 }
 
-// Type returns the type of node style.
-func (n *Node) Type() string {
-	return n.style.Type
-}
-
-// Shape returns node shape.
-func (n *Node) Shape() string {
-	return n.style.Shape
-}
-
-// Color returns node color.
-func (n *Node) Color() color.RGBA {
-	return n.style.Color
-}
-
 // DOTID returns GraphVIz DOT ID.
 func (n *Node) DOTID() string {
 	n.mu.RLock()
@@ -203,19 +184,12 @@ func (n *Node) Attributes() []encoding.Attribute {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
-	styleAttrs := []encoding.Attribute{
-		{Key: "label", Value: n.label},
-		{Key: "shape", Value: n.style.Shape},
-		{Key: "style", Value: n.style.Type},
-	}
-
 	a := AttrsToStringMap(n.attrs)
 	attributes := make([]encoding.Attribute, 0, len(a))
 
 	for k, v := range a {
 		attributes = append(attributes, encoding.Attribute{Key: k, Value: v})
 	}
-	attributes = append(attributes, styleAttrs...)
 
 	return attributes
 }
@@ -229,10 +203,10 @@ func (n *Node) Clone() (*Node, error) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
-	options := []Option{
-		WithUID(uuid.New().String()),
-		WithLabel(n.label),
-		WithAttrs(maps.Clone(n.attrs)),
+	options := []hypher.Option{
+		hypher.WithUID(uuid.New().String()),
+		hypher.WithLabel(n.label),
+		hypher.WithAttrs(maps.Clone(n.attrs)),
 	}
 	n2, err := NewNode(options...)
 	if err != nil {

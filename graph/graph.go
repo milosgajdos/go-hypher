@@ -38,9 +38,9 @@ type Graph struct {
 }
 
 // NewGraph creates a new graph and returns it.
-func NewGraph(opts ...Option) (*Graph, error) {
+func NewGraph(opts ...hypher.Option) (*Graph, error) {
 	uid := uuid.New().String()
-	gopts := Options{
+	gopts := hypher.Options{
 		UID:    uid,
 		DotID:  uid,
 		Label:  DefaultGraphLabel,
@@ -129,18 +129,12 @@ func (g *Graph) Attributes() []encoding.Attribute {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	styleAttrs := []encoding.Attribute{
-		{Key: "label", Value: g.label},
-		{Key: "labelloc", Value: "t"},
-	}
-
 	a := AttrsToStringMap(g.attrs)
 	attributes := make([]encoding.Attribute, 0, len(a))
 
 	for k, v := range a {
 		attributes = append(attributes, encoding.Attribute{Key: k, Value: v})
 	}
-	attributes = append(attributes, styleAttrs...)
 
 	return attributes
 }
@@ -196,8 +190,8 @@ func (g *Graph) Outputs() []*Node {
 
 // NewNode creates a new node and adds it to the graph.
 // It returns the new node or fails with error.
-func (g *Graph) NewNode(opts ...Option) (*Node, error) {
-	opts = append(opts, WithGraph(g))
+func (g *Graph) NewNode(opts ...hypher.Option) (*Node, error) {
+	opts = append(opts, hypher.WithGraph(g))
 	return NewNode(opts...)
 }
 
@@ -247,8 +241,8 @@ func (g *Graph) AddNode(n *Node) error {
 
 // NewEdge creates a new edge link its node in the graph.
 // It returns the new edge or fails with error.
-func (g *Graph) NewEdge(from, to hypher.Node, opts ...Option) (*Edge, error) {
-	opts = append(opts, WithGraph(g))
+func (g *Graph) NewEdge(from, to hypher.Node, opts ...hypher.Option) (*Edge, error) {
+	opts = append(opts, hypher.WithGraph(g))
 	return NewEdge(from, to, opts...)
 }
 
@@ -566,9 +560,9 @@ func (g *Graph) run(ctx context.Context) error {
 // Run is a blocking call. It returns when
 // when the graph execution finished or if any
 // of the executed nodes Op failed with error.
-func (g *Graph) Run(ctx context.Context, inputs map[string]hypher.Value, opts ...Option) error {
+func (g *Graph) Run(ctx context.Context, inputs map[string]hypher.Value, opts ...hypher.Option) error {
 	// NOTE: we only read Parallel option.
-	gopts := Options{}
+	gopts := hypher.Options{}
 	for _, apply := range opts {
 		apply(&gopts)
 	}
@@ -582,7 +576,7 @@ func (g *Graph) Run(ctx context.Context, inputs map[string]hypher.Value, opts ..
 		}
 	}
 
-	if gopts.RunAll {
+	if gopts.RunMode == hypher.RunAllMode {
 		return g.runAll(ctx)
 	}
 
