@@ -2,7 +2,13 @@
 //
 // An agent is represented as a weighted Directed Acyclic Graph (DAG)
 // which consists of nodes that perform a specific operation during
-// agent execution.
+// agent execution aka Hypher Run.
+//
+// Hypher Run executes all the nodes in the hypher Graph and computes
+// the results of their operations. All the outputs of the nodes
+// are then passed to theis successors which then use them as their inputs.
+// This continues all the way down to the hypher graph output nodes where
+// the agent result is stored and can be fetched from.
 //
 // Given the agents are DAGs, they can form ensambles of agents
 // through additional edges that link the agent DAGs as long
@@ -11,7 +17,6 @@ package hypher
 
 import (
 	"context"
-	"image/color"
 
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
@@ -28,6 +33,8 @@ type Graph interface {
 	Label() string
 	// Attrs are graph attributes.
 	Attrs() map[string]any
+	// String is useful for debugging.
+	String() string
 }
 
 // DOTNGraph is Graphviz DOT graph.
@@ -51,18 +58,12 @@ type Node interface {
 	Label() string
 	// Attrs returns node attributes.
 	Attrs() map[string]any
+	// String is useful for debugging.
+	String() string
 }
 
-// Styler is used for styling.
-type Styler interface {
-	// Type returns the type of style.
-	// TODO: rename to Style
-	Type() string
-	// Shape returns style shape.
-	Shape() string
-	// Color returns style color.
-	Color() color.RGBA
-}
+// Nodes is a slice of Nodes.
+type Nodes []Node
 
 // DOTNode is Graphviz DOT node.
 type DOTNode interface {
@@ -83,6 +84,8 @@ type Edge interface {
 	Label() string
 	// Attrs returns node attributes.
 	Attrs() map[string]any
+	// String is useful for debugging.
+	String() string
 }
 
 // LabelSetter sets label.
@@ -165,6 +168,20 @@ type Loader interface {
 // Value is an I/O value.
 type Value map[string]any
 
+// Runner is used to trigger a hypher Run.
+// This usually means running the hypher Graph, by executing all its nodes.
+type Runner interface {
+	// Run an operation with the given inputs and options.
+	Run(ctx context.Context, inputs map[string]Value, opts ...Option) error
+}
+
+// Execer executes a hypher operation.
+// This usually means executing the hypher Node, by running its Op.
+type Execer interface {
+	// Exec executes an operation with the given inputs and returns the results.
+	Exec(ctx context.Context, inputs ...Value) (Value, error)
+}
+
 // Op is an operation run by a Node.
 type Op interface {
 	// Type of the Op.
@@ -172,5 +189,7 @@ type Op interface {
 	// Desc describes the Op.
 	Desc() string
 	// Do runs the Op.
-	Do(context.Context, ...Value) (Value, error)
+	Do(ctx context.Context, inputs ...Value) (Value, error)
+	// String is useful for debugging.
+	String() string
 }

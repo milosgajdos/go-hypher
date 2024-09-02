@@ -9,7 +9,7 @@ import (
 	"github.com/milosgajdos/go-hypher"
 )
 
-func MustGraph(t *testing.T, opts ...Option) *Graph {
+func MustGraph(t *testing.T, opts ...hypher.Option) *Graph {
 	g, err := NewGraph(opts...)
 	if err != nil {
 		t.Fatal(err)
@@ -54,9 +54,9 @@ func TestNewGraphWithOpts(t *testing.T) {
 	attrs := map[string]any{"foo": "bar"}
 
 	g, err := NewGraph(
-		WithUID(uid),
-		WithLabel(label),
-		WithAttrs(attrs),
+		hypher.WithUID(uid),
+		hypher.WithLabel(label),
+		hypher.WithAttrs(attrs),
 	)
 	if err != nil {
 		t.Fatalf("failed to create new graph: %v", err)
@@ -136,8 +136,8 @@ func TestGraphSetEdge(t *testing.T) {
 
 func TestGraphInputsOutputs(t *testing.T) {
 	g := MustGraph(t)
-	n1 := MustNode(t, WithGraph(g))
-	n2 := MustNode(t, WithGraph(g))
+	n1 := MustNode(t, hypher.WithGraph(g))
+	n2 := MustNode(t, hypher.WithGraph(g))
 
 	g.SetInputs([]*Node{n1})
 	g.SetOutputs([]*Node{n2})
@@ -158,7 +158,7 @@ func TestSubGraph(t *testing.T) {
 	// Create nodes
 	nodes := make(map[int64]*Node)
 	for i := int64(0); i < 7; i++ {
-		node := MustNode(t, WithGraph(g))
+		node := MustNode(t, hypher.WithGraph(g))
 		nodes[i] = node
 	}
 
@@ -255,9 +255,9 @@ func TestGraphTopoSort(t *testing.T) {
 			name: "Simple_graph",
 			setupGraph: func() (*Graph, error) {
 				g := MustGraph(t)
-				n1 := MustNode(t, WithGraph(g))
-				n2 := MustNode(t, WithGraph(g))
-				n3 := MustNode(t, WithGraph(g))
+				n1 := MustNode(t, hypher.WithGraph(g))
+				n2 := MustNode(t, hypher.WithGraph(g))
+				n3 := MustNode(t, hypher.WithGraph(g))
 				if err := g.SetEdge(MustEdge(t, n1, n2)); err != nil {
 					return nil, err
 				}
@@ -318,8 +318,9 @@ const testOpKey = "test"
 
 type testOp struct{}
 
-func (t testOp) Type() string { return "testOp" }
-func (t testOp) Desc() string { return "testOp sets inputs to outputs" }
+func (t testOp) Type() string   { return "testOp" }
+func (t testOp) Desc() string   { return "testOp sets inputs to outputs" }
+func (t testOp) String() string { return "testOp" }
 
 func (t testOp) Do(_ context.Context, inputs ...hypher.Value) (hypher.Value, error) {
 	return hypher.Value{testOpKey: inputs}, nil
@@ -359,17 +360,17 @@ func TestGraph(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		runAll   bool
+		runMode  hypher.RunMode
 		expected map[int64]int // map of node ID to expected input count
 	}{
 		{
-			name:     "Run",
-			runAll:   false,
+			name:     "RunLevel",
+			runMode:  hypher.RunLevelMode,
 			expected: expected,
 		},
 		{
 			name:     "RunAll",
-			runAll:   true,
+			runMode:  hypher.RunAllMode,
 			expected: expected,
 		},
 	}
@@ -380,11 +381,13 @@ func TestGraph(t *testing.T) {
 
 			nodes := make([]*Node, 7)
 			for i := range nodes {
-				nodes[i] = MustNode(t, WithGraph(g), WithOp(testOp{}))
+				nodes[i] = MustNode(t,
+					hypher.WithGraph(g),
+					hypher.WithOp(testOp{}))
 			}
 
 			for _, edge := range edges {
-				MustEdge(t, nodes[edge[0]], nodes[edge[1]], WithGraph(g))
+				MustEdge(t, nodes[edge[0]], nodes[edge[1]], hypher.WithGraph(g))
 			}
 
 			g.SetInputs([]*Node{nodes[0], nodes[2]})
@@ -403,11 +406,7 @@ func TestGraph(t *testing.T) {
 				nodes[2].UID(): {"ID": nodes[2].ID()},
 			}
 
-			var runOpts []Option
-			if tc.runAll {
-				runOpts = append(runOpts, WithRunAll())
-			}
-			if err := g.Run(context.Background(), graphInputs, runOpts...); err != nil {
+			if err := g.Run(context.Background(), graphInputs, hypher.WithRunMode(tc.runMode)); err != nil {
 				t.Fatalf("run failed: %v", err)
 			}
 

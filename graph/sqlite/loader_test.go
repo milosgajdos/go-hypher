@@ -31,11 +31,11 @@ func TestLoader_Load(t *testing.T) {
 	}
 
 	// Create two nodes
-	nodeOpts := []graph.Option{
-		graph.WithID(1),
-		graph.WithUID("node1"),
-		graph.WithLabel("Node 1"),
-		graph.WithAttrs(map[string]any{"key": "value"}),
+	nodeOpts := []hypher.Option{
+		hypher.WithID(1),
+		hypher.WithUID("node1"),
+		hypher.WithLabel("Node 1"),
+		hypher.WithAttrs(map[string]any{"key": "value"}),
 	}
 
 	node1, err := graph.NewNode(nodeOpts...)
@@ -46,11 +46,11 @@ func TestLoader_Load(t *testing.T) {
 		t.Fatalf("failed to add node: %d: %v", node1.ID(), err)
 	}
 
-	nodeOpts = []graph.Option{
-		graph.WithID(2),
-		graph.WithUID("node2"),
-		graph.WithLabel("Node 2"),
-		graph.WithAttrs(map[string]any{"key": "value"}),
+	nodeOpts = []hypher.Option{
+		hypher.WithID(2),
+		hypher.WithUID("node2"),
+		hypher.WithLabel("Node 2"),
+		hypher.WithAttrs(map[string]any{"key": "value"}),
 	}
 
 	node2, err := graph.NewNode(nodeOpts...)
@@ -62,11 +62,11 @@ func TestLoader_Load(t *testing.T) {
 	}
 
 	// Create an edge between the two nodes
-	edgeOpts := []graph.Option{
-		graph.WithUID("edge1"),
-		graph.WithLabel("Edge 1"),
-		graph.WithWeight(1.0),
-		graph.WithAttrs(map[string]any{"key2": "value2"}),
+	edgeOpts := []hypher.Option{
+		hypher.WithUID("edge1"),
+		hypher.WithLabel("Edge 1"),
+		hypher.WithWeight(1.0),
+		hypher.WithAttrs(map[string]any{"key2": "value2"}),
 	}
 
 	edge, err := graph.NewEdge(node1, node2, edgeOpts...)

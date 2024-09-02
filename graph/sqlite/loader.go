@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/milosgajdos/go-hypher"
 	"github.com/milosgajdos/go-hypher/graph"
 )
 
@@ -57,9 +58,9 @@ func (l *Loader) Load(ctx context.Context, uid string) (*graph.Graph, error) {
 
 	// Create the in-memory graph
 	g, err := graph.NewGraph(
-		graph.WithUID(uid),
-		graph.WithLabel(label),
-		graph.WithAttrs(attrs),
+		hypher.WithUID(uid),
+		hypher.WithLabel(label),
+		hypher.WithAttrs(attrs),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create in-memory graph: %w", err)
@@ -105,10 +106,10 @@ func (l *Loader) Load(ctx context.Context, uid string) (*graph.Graph, error) {
 
 		// Create node and add it to the graph
 		node, err := graph.NewNode(
-			graph.WithID(id),
-			graph.WithUID(nodeUID),
-			graph.WithLabel(nodeLabel),
-			graph.WithAttrs(nodeAttrs),
+			hypher.WithID(id),
+			hypher.WithUID(nodeUID),
+			hypher.WithLabel(nodeLabel),
+			hypher.WithAttrs(nodeAttrs),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create node: %w", err)
@@ -171,10 +172,10 @@ func (l *Loader) Load(ctx context.Context, uid string) (*graph.Graph, error) {
 		}
 
 		edge, err := graph.NewEdge(sourceNode, targetNode,
-			graph.WithUID(edgeUID),
-			graph.WithLabel(edgeLabel),
-			graph.WithWeight(weight),
-			graph.WithAttrs(edgeAttrs),
+			hypher.WithUID(edgeUID),
+			hypher.WithLabel(edgeLabel),
+			hypher.WithWeight(weight),
+			hypher.WithAttrs(edgeAttrs),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create edge: %w", err)

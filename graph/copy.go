@@ -16,7 +16,6 @@ func NodeDeepCopy(n *Node) *Node {
 		label: n.label,
 		attrs: maps.Clone(n.attrs),
 		graph: n.graph,
-		style: n.style,
 	}
 }
 
@@ -29,7 +28,6 @@ func EdgeDeepCopy(e *Edge) *Edge {
 		to:     NodeDeepCopy(e.To().(*Node)),
 		weight: e.weight,
 		attrs:  maps.Clone(e.attrs),
-		style:  e.style,
 	}
 }
 

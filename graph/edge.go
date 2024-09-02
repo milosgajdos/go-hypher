@@ -2,7 +2,6 @@ package graph
 
 import (
 	"fmt"
-	"image/color"
 	"strings"
 	"sync"
 
@@ -28,18 +27,16 @@ type Edge struct {
 	to     hypher.Node
 	weight float64
 	attrs  map[string]any
-	style  Style
 	mu     sync.RWMutex
 }
 
 // NewEdge creates a new edge and returns it.
-func NewEdge(from, to hypher.Node, opts ...Option) (*Edge, error) {
-	eopts := Options{
+func NewEdge(from, to hypher.Node, opts ...hypher.Option) (*Edge, error) {
+	eopts := hypher.Options{
 		UID:    uuid.New().String(),
 		Weight: DefaultEdgeWeight,
 		Label:  DefaultEdgeLabel,
 		Attrs:  make(map[string]any),
-		Style:  DefaultEdgeStyle(),
 	}
 
 	for _, apply := range opts {
@@ -53,11 +50,10 @@ func NewEdge(from, to hypher.Node, opts ...Option) (*Edge, error) {
 		weight: eopts.Weight,
 		label:  eopts.Label,
 		attrs:  eopts.Attrs,
-		style:  eopts.Style,
 	}
 
 	if g := eopts.Graph; g != nil {
-		if err := g.SetEdge(edge); err != nil {
+		if err := g.(*Graph).SetEdge(edge); err != nil {
 			return nil, err
 		}
 	}
@@ -141,7 +137,6 @@ func (e *Edge) ReversedEdge() gonum.Edge {
 		label:  e.label,
 		weight: e.weight,
 		attrs:  e.attrs,
-		style:  e.style,
 	}
 }
 
@@ -153,31 +148,10 @@ func (e *Edge) Attrs() map[string]any {
 	return e.attrs
 }
 
-// Style returns edge style.
-func (e *Edge) Style() string {
-	return e.style.Type
-}
-
-// Shape returns edge shape.
-func (e *Edge) Shape() string {
-	return e.style.Shape
-}
-
-// Color returns edge color.
-func (e *Edge) Color() color.RGBA {
-	return e.style.Color
-}
-
 // Attributes returns node DOT attributes.
 func (e *Edge) Attributes() []encoding.Attribute {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-
-	styleAttrs := []encoding.Attribute{
-		{Key: "label", Value: e.label},
-		{Key: "shape", Value: e.style.Shape},
-		{Key: "style", Value: e.style.Type},
-	}
 
 	a := AttrsToStringMap(e.attrs)
 	attributes := make([]encoding.Attribute, 0, len(a))
@@ -185,7 +159,6 @@ func (e *Edge) Attributes() []encoding.Attribute {
 	for k, v := range a {
 		attributes = append(attributes, encoding.Attribute{Key: k, Value: v})
 	}
-	attributes = append(attributes, styleAttrs...)
 
 	return attributes
 }

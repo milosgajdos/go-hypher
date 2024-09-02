@@ -3,11 +3,13 @@ package graph
 import (
 	"reflect"
 	"testing"
+
+	"github.com/milosgajdos/go-hypher"
 )
 
 func TestCopy(t *testing.T) {
 	t.Run("EmptyGraph", func(t *testing.T) {
-		g, err := NewGraph(WithLabel("foo"))
+		g, err := NewGraph(hypher.WithLabel("foo"))
 		if err != nil {
 			t.Fatalf("failed to create graph: %v", err)
 		}
