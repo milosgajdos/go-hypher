@@ -322,8 +322,8 @@ func (t testOp) Type() string   { return "testOp" }
 func (t testOp) Desc() string   { return "testOp sets inputs to outputs" }
 func (t testOp) String() string { return "testOp" }
 
-func (t testOp) Do(_ context.Context, inputs ...hypher.Value) (hypher.Value, error) {
-	return hypher.Value{testOpKey: inputs}, nil
+func (t testOp) Do(_ context.Context, inputs ...hypher.Value) ([]hypher.Value, error) {
+	return []hypher.Value{{testOpKey: inputs}}, nil
 }
 
 // Check input propagation
@@ -360,17 +360,17 @@ func TestGraph(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		runMode  hypher.RunMode
+		runMode  hypher.ConcMode
 		expected map[int64]int // map of node ID to expected input count
 	}{
 		{
-			name:     "RunLevel",
-			runMode:  hypher.RunLevelMode,
+			name:     "ConcLevel",
+			runMode:  hypher.ConcLevelMode,
 			expected: expected,
 		},
 		{
-			name:     "RunAll",
-			runMode:  hypher.RunAllMode,
+			name:     "ConcAll",
+			runMode:  hypher.ConcAllMode,
 			expected: expected,
 		},
 	}
@@ -406,7 +406,7 @@ func TestGraph(t *testing.T) {
 				nodes[2].UID(): {"ID": nodes[2].ID()},
 			}
 
-			if err := g.Run(context.Background(), graphInputs, hypher.WithRunMode(tc.runMode)); err != nil {
+			if err := g.Run(context.Background(), graphInputs, hypher.WithConcMode(tc.runMode)); err != nil {
 				t.Fatalf("run failed: %v", err)
 			}
 

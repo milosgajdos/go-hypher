@@ -164,6 +164,7 @@ func (g *Graph) SetInputs(nodes []*Node) {
 }
 
 // Inputs returns graph input nodes.
+// TODO: consider cloning inputs.
 func (g *Graph) Inputs() []*Node {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -186,6 +187,15 @@ func (g *Graph) Outputs() []*Node {
 	defer g.mu.RUnlock()
 
 	return g.outputs
+}
+
+// Reset resets node inputs and outputs.
+func (g *Graph) Reset() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.inputs = []*Node{}
+	g.outputs = []*Node{}
 }
 
 // NewNode creates a new node and adds it to the graph.
@@ -445,7 +455,7 @@ func (g *Graph) execNodeWait(ctx context.Context, node *Node, nodeChans map[int6
 	// TODO: handle the case where we might not want to
 	// aggregate all the predecessor outputs into Exec input;
 	// We might want to do an exec for each predecessor output
-	var nodeInputs []hypher.Value
+	var nodeExecInputs []hypher.Value
 	to := g.To(node.ID())
 	for to.Next() {
 		pred := to.Node()
@@ -454,12 +464,15 @@ func (g *Graph) execNodeWait(ctx context.Context, node *Node, nodeChans map[int6
 			return ctx.Err()
 		case <-nodeChans[pred.ID()]: // Wait for the predecessor to finish
 			predOutputs := pred.(*Node).Outputs()
-			nodeInputs = append(nodeInputs, predOutputs...)
+			nodeExecInputs = append(nodeExecInputs, predOutputs...)
 		}
 	}
 
 	// exec the node
-	if _, err := node.Exec(ctx, nodeInputs...); err != nil {
+	// TODO: Exec should have two modes
+	// * combined (all inputs are combined for a single exec)
+	// * oneshot (exec is run for every input separately)
+	if _, err := node.Exec(ctx, nodeExecInputs...); err != nil {
 		return err
 	}
 
@@ -508,17 +521,17 @@ func (g *Graph) runAll(ctx context.Context) error {
 }
 
 func (g *Graph) execNode(ctx context.Context, node *Node) error {
-	var nodeInputs []hypher.Value
+	var nodeExecInputs []hypher.Value
 	to := g.To(node.ID())
 
 	for to.Next() {
 		pred := to.Node()
 		predOutputs := pred.(*Node).Outputs()
-		nodeInputs = append(nodeInputs, predOutputs...)
+		nodeExecInputs = append(nodeExecInputs, predOutputs...)
 	}
 
 	// exec the node
-	if _, err := node.Exec(ctx, nodeInputs...); err != nil {
+	if _, err := node.Exec(ctx, nodeExecInputs...); err != nil {
 		return err
 	}
 
@@ -555,11 +568,11 @@ func (g *Graph) run(ctx context.Context) error {
 }
 
 // Run runs the graph with the given inputs.
-// The inputs are passed in to the input nodes.
-// Run executes all the graph nodes operations.
-// Run is a blocking call. It returns when
-// when the graph execution finished or if any
-// of the executed nodes Op failed with error.
+// The given inputs are set as inputs to the graph input nodes.
+// Run executes all the graph nodes operations in the run mode
+// passed via options. Run is a blocking call.
+// It returns when the execution finished or
+// if any of the executed nodes failed with error.
 func (g *Graph) Run(ctx context.Context, inputs map[string]hypher.Value, opts ...hypher.Option) error {
 	// NOTE: we only read Parallel option.
 	gopts := hypher.Options{}
@@ -576,7 +589,7 @@ func (g *Graph) Run(ctx context.Context, inputs map[string]hypher.Value, opts ..
 		}
 	}
 
-	if gopts.RunMode == hypher.RunAllMode {
+	if gopts.ConcMode == hypher.ConcAllMode {
 		return g.runAll(ctx)
 	}
 

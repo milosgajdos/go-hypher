@@ -155,6 +155,15 @@ func (n *Node) Outputs() []hypher.Value {
 	return n.outputs
 }
 
+// Reset resets node inputs and outputs.
+func (n *Node) Reset() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	n.inputs = []hypher.Value{}
+	n.outputs = []hypher.Value{}
+}
+
 // Op returns node Op.
 func (n *Node) Op() hypher.Op {
 	n.mu.RLock()
@@ -163,7 +172,7 @@ func (n *Node) Op() hypher.Op {
 	return n.op
 }
 
-// DOTID returns GraphVIz DOT ID.
+// DOTID returns GraphViz DOT ID.
 func (n *Node) DOTID() string {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -240,7 +249,7 @@ func (n *Node) CloneTo(g *Graph) (*Node, error) {
 
 // Exec executes a node Op and returns its result.
 // It appends the output of the Op to its outputs.
-func (n *Node) Exec(ctx context.Context, inputs ...hypher.Value) (hypher.Value, error) {
+func (n *Node) Exec(ctx context.Context, inputs ...hypher.Value) ([]hypher.Value, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
@@ -248,13 +257,13 @@ func (n *Node) Exec(ctx context.Context, inputs ...hypher.Value) (hypher.Value, 
 	copy(opInputs, n.inputs)
 	copy(opInputs[len(n.inputs):], inputs)
 
-	output, err := n.op.Do(ctx, opInputs...)
+	outputs, err := n.op.Do(ctx, opInputs...)
 	if err != nil {
-		return nil, fmt.Errorf("node %s op: %s error: %v", n.UID(), n.op.Desc(), err)
+		return nil, fmt.Errorf("node %s op: %s error: %v", n.UID(), n.op, err)
 	}
-	n.outputs = append(n.outputs, output)
+	n.outputs = append(n.outputs, outputs...)
 
-	return output, nil
+	return outputs, nil
 }
 
 // String implements fmt.Stringer.

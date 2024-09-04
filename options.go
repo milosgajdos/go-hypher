@@ -2,14 +2,14 @@ package hypher
 
 import "maps"
 
-// RunMode is Graph run mode.
-type RunMode int
+// ConcMode is Graph run concurrency mode.
+type ConcMode int
 
 const (
-	// RunLevelMode runs node on the same graph level concurrently
-	RunLevelMode RunMode = iota
-	// RunAllMode runs all Graph nodes concurrently.
-	RunAllMode
+	// ConcLevelMode runs nodes on the same graph level concurrently.
+	ConcLevelMode ConcMode = iota
+	// ConcAllMode runs all Graph nodes concurrently.
+	ConcAllMode
 )
 
 // Options configure graph.
@@ -28,8 +28,8 @@ type Options struct {
 	Weight float64
 	// Graph configures Node's graph
 	Graph Graph
-	// RunMode configures Graph run mode.
-	RunMode RunMode
+	// ConcMode configures Graph run concurrency mode.
+	ConcMode ConcMode
 	// Op configures Node's Op.
 	Op Op
 }
@@ -87,9 +87,9 @@ func WithGraph(g Graph) Option {
 }
 
 // WithRunAll sets Parallel option.
-func WithRunMode(mode RunMode) Option {
+func WithConcMode(mode ConcMode) Option {
 	return func(o *Options) {
-		o.RunMode = mode
+		o.ConcMode = mode
 	}
 }
 

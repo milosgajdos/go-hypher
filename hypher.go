@@ -168,6 +168,24 @@ type Loader interface {
 // Value is an I/O value.
 type Value map[string]any
 
+// Inputer returns its inputs.
+type Inputer interface {
+	// Inputs returns input values.
+	Inputs() []Value
+}
+
+// Outputer returns its outputs.
+type Outputer interface {
+	// Outputs returns output values.
+	Outputs() []Value
+}
+
+// Reseter resets inputs and outputs.
+type Reseter interface {
+	// Reset inputs and outputs.
+	Reset()
+}
+
 // Runner is used to trigger a hypher Run.
 // This usually means running the hypher Graph, by executing all its nodes.
 type Runner interface {
@@ -179,7 +197,7 @@ type Runner interface {
 // This usually means executing the hypher Node, by running its Op.
 type Execer interface {
 	// Exec executes an operation with the given inputs and returns the results.
-	Exec(ctx context.Context, inputs ...Value) (Value, error)
+	Exec(ctx context.Context, inputs ...Value) ([]Value, error)
 }
 
 // Op is an operation run by a Node.
@@ -189,7 +207,7 @@ type Op interface {
 	// Desc describes the Op.
 	Desc() string
 	// Do runs the Op.
-	Do(ctx context.Context, inputs ...Value) (Value, error)
+	Do(ctx context.Context, inputs ...Value) ([]Value, error)
 	// String is useful for debugging.
 	String() string
 }
